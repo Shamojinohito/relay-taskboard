@@ -1,0 +1,21 @@
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+
+export function useProjects() {
+  const supabase = createClient()
+
+  const { data: projects = [], isLoading } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .is('archived_at', null)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return data
+    },
+  })
+
+  return { projects, isLoading }
+}
