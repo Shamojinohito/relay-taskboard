@@ -8,6 +8,7 @@ import {
 import { KanbanColumn } from './kanban-column'
 import { TaskCard } from './task-card'
 import { useTasks, type TaskStatus } from '@/hooks/use-tasks'
+import { useTasksRealtime } from '@/hooks/use-realtime'
 
 const STATUSES: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done']
 
@@ -18,6 +19,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardProps) {
+  useTasksRealtime(projectId)
   const { tasks, updateStatus } = useTasks(projectId)
   const [activeTask, setActiveTask] = useState<(typeof tasks)[0] | null>(null)
 
