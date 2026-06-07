@@ -4,6 +4,8 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { KanbanBoard } from '@/components/board/kanban-board'
+import TaskDetailPanel from '@/components/tasks/task-detail-panel'
+import TaskForm from '@/components/tasks/task-form'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { useProjects } from '@/hooks/use-projects'
@@ -42,11 +44,20 @@ export default function ProjectBoardPage() {
         />
       </div>
 
-      {/* TaskDetailPanel and TaskForm will be added in Task 7 */}
       {selectedTaskId && (
-        <div className="w-96 border-l border-border bg-card flex items-center justify-center text-muted-foreground text-sm">
-          Task detail panel (Task 7)
-        </div>
+        <TaskDetailPanel
+          taskId={selectedTaskId}
+          projectId={id}
+          onClose={() => setSelectedTaskId(null)}
+        />
+      )}
+
+      {createStatus && (
+        <TaskForm
+          projectId={id}
+          initialStatus={createStatus}
+          onClose={() => setCreateStatus(null)}
+        />
       )}
     </div>
   )
