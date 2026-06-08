@@ -1,9 +1,9 @@
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Agents table (AI agents, separate from human users)
 CREATE TABLE agents (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   type        TEXT NOT NULL CHECK (type IN ('planner','tech_lead','worker','custom')),
   api_key     TEXT NOT NULL UNIQUE,  -- hashed with SHA-256
@@ -13,7 +13,7 @@ CREATE TABLE agents (
 
 -- Projects
 CREATE TABLE projects (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT NOT NULL,
   description  TEXT,
   owner_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -31,7 +31,7 @@ CREATE TABLE project_members (
 
 -- Tags (project-scoped)
 CREATE TABLE tags (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id  UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name        TEXT NOT NULL,
   color       TEXT NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE tags (
 
 -- Tasks (3-level: project > task > subtask)
 CREATE TABLE tasks (
-  id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id           UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   parent_task_id       UUID REFERENCES tasks(id) ON DELETE CASCADE,
   title                TEXT NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE task_tags (
 
 -- Task comments (also stores AI agent instructions)
 CREATE TABLE task_comments (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id           UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   body              TEXT NOT NULL,
   author_user_id    UUID REFERENCES auth.users(id),
@@ -81,7 +81,7 @@ CREATE TABLE task_comments (
 
 -- Agent execution log
 CREATE TABLE agent_runs (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id    UUID NOT NULL REFERENCES agents(id),
   trigger     TEXT NOT NULL CHECK (trigger IN ('manual','scheduled')),
   status      TEXT NOT NULL DEFAULT 'running'
