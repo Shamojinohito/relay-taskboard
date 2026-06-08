@@ -4,17 +4,27 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Bot, CalendarDays, AlertCircle } from 'lucide-react'
+import { Bot, CalendarDays, UserRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 const PRIORITY_COLORS = {
-  low: 'text-blue-400',
-  medium: 'text-yellow-400',
-  high: 'text-orange-400',
-  urgent: 'text-red-400',
+  low: 'border-l-sky-400',
+  medium: 'border-l-amber-400',
+  high: 'border-l-orange-500',
+  urgent: 'border-l-rose-500',
 } as const
+
+const ASSIGNEE_COLORS = [
+  '#38bdf8',
+  '#a78bfa',
+  '#34d399',
+  '#fbbf24',
+  '#fb7185',
+  '#2dd4bf',
+  '#f472b6',
+  '#c084fc',
+]
 
 interface TaskCardProps {
   task: {
@@ -23,11 +33,21 @@ interface TaskCardProps {
     status: string
     priority: string
     due_date: string | null
+    assignee_user_id?: string | null
+    assignee_agent_id?: string | null
     task_tags: { tags: { id: string; name: string; color: string } | null }[]
-    assignee_user?: { email: string; raw_user_meta_data: Record<string, string> } | null
     assignee_agent: { name: string; type: string } | null
   }
   onClick: () => void
+}
+
+function getStableColor(seed?: string | null) {
+  if (!seed) return '#6b7280'
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) % ASSIGNEE_COLORS.length
+  }
+  return ASSIGNEE_COLORS[hash]
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
@@ -39,6 +59,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     transition,
     opacity: isDragging ? 0.5 : 1,
   }
+  const assigneeId = task.assignee_agent_id ?? task.assignee_user_id
+  const assigneeName = task.assignee_agent?.name ?? (task.assignee_user_id ? 'Me' : null)
+  const assigneeColor = getStableColor(assigneeId)
 
   return (
     <div
@@ -47,11 +70,16 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/50 transition-colors space-y-2"
+      className={cn(
+        'bg-card border border-l-4 border-border rounded-lg p-3 cursor-pointer hover:border-primary/50 transition-colors space-y-2',
+        PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS] ?? 'border-l-muted'
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-foreground leading-snug">{task.title}</p>
-        <AlertCircle size={14} className={cn('flex-shrink-0 mt-0.5', PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS])} />
+        <span className="rounded border border-border px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+          {task.priority}
+        </span>
       </div>
 
       {task.task_tags.length > 0 && (
@@ -69,22 +97,16 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {task.due_date && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <CalendarDays size={11} />
-            {format(new Date(task.due_date), 'MMM d')}
+            {format(new Date(task.due_date), 'yyyy.MM.dd')}
           </div>
         )}
         <div className="ml-auto">
-          {task.assignee_agent ? (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Bot size={12} />
-              <span>{task.assignee_agent.name}</span>
+          {assigneeName ? (
+            <div className="flex max-w-32 items-center gap-1.5 truncate text-xs text-muted-foreground">
+              <span className="size-2 rounded-full" style={{ backgroundColor: assigneeColor }} />
+              {task.assignee_agent ? <Bot size={12} /> : <UserRound size={12} />}
+              <span className="truncate">{assigneeName}</span>
             </div>
-          ) : task.assignee_user ? (
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={task.assignee_user.raw_user_meta_data?.avatar_url} />
-              <AvatarFallback className="text-xs">
-                {task.assignee_user.email.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
           ) : null}
         </div>
       </div>
