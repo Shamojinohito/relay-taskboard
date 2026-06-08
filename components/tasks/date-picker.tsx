@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { addMonths, format, getDay, isSameDay, parseISO, startOfMonth, subMonths } from 'date-fns'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 interface DatePickerProps {
@@ -41,17 +42,24 @@ export default function DatePicker({ value, onChange, className }: DatePickerPro
 
   return (
     <div className={cn('relative', className)}>
-      <Button
-        type="button"
-        variant="outline"
-        className="h-8 w-full justify-start gap-2 px-2.5 text-left font-normal"
-        onClick={() => setOpen(current => !current)}
-      >
-        <CalendarDays size={14} />
-        <span className={cn(!value && 'text-muted-foreground')}>
-          {selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'No due date'}
-        </span>
-      </Button>
+      <div className="flex h-8 w-full rounded-lg border border-input bg-transparent dark:bg-input/30">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="h-full rounded-r-none border-r border-border px-2"
+          onClick={() => setOpen(current => !current)}
+        >
+          <CalendarDays size={14} />
+          <span className="sr-only">Open calendar</span>
+        </Button>
+        <Input
+          type="date"
+          value={value}
+          onChange={event => onChange(event.target.value)}
+          className="h-full flex-1 border-0 bg-transparent px-2 text-sm focus-visible:ring-0"
+        />
+      </div>
 
       {open && (
         <div className="absolute z-50 mt-2 w-64 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md">
