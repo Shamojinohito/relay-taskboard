@@ -10,8 +10,9 @@ import { KanbanColumn } from './kanban-column'
 import { TaskCard } from './task-card'
 import { useTasks, type TaskStatus } from '@/hooks/use-tasks'
 import { useTasksRealtime } from '@/hooks/use-realtime'
+import { TASK_STATUSES } from '@/lib/task-status'
 
-const STATUSES: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done']
+const STATUSES: TaskStatus[] = [...TASK_STATUSES]
 
 interface KanbanBoardProps {
   projectId: string

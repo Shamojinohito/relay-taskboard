@@ -1,8 +1,9 @@
 // hooks/use-tasks.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import type { TaskStatus } from '@/lib/task-status'
 
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done'
+export type { TaskStatus }
 
 export function useTasks(projectId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

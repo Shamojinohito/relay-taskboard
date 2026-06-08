@@ -46,7 +46,7 @@ CREATE TABLE tasks (
   title                TEXT NOT NULL,
   description          TEXT,
   status               TEXT NOT NULL DEFAULT 'backlog'
-                         CHECK (status IN ('backlog','todo','in_progress','in_review','done')),
+                         CHECK (status IN ('backlog','todo','in_progress','on_hold','in_review','done')),
   priority             TEXT NOT NULL DEFAULT 'medium'
                          CHECK (priority IN ('low','medium','high','urgent')),
   assignee_user_id     UUID REFERENCES auth.users(id),

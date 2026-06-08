@@ -7,22 +7,7 @@ import { TaskCard } from './task-card'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-
-const COLUMN_LABELS: Record<string, string> = {
-  backlog: 'Backlog',
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  in_review: 'In Review',
-  done: 'Done',
-}
-
-const COLUMN_ACCENTS: Record<string, string> = {
-  backlog: 'bg-slate-400',
-  todo: 'bg-sky-400',
-  in_progress: 'bg-amber-400',
-  in_review: 'bg-violet-400',
-  done: 'bg-emerald-400',
-}
+import { getTaskStatusDotColor, getTaskStatusLabel } from '@/lib/task-status'
 
 interface KanbanColumnProps {
   status: string
@@ -38,8 +23,8 @@ export function KanbanColumn({ status, tasks, onTaskClick, onAddTask }: KanbanCo
     <div className="flex w-72 flex-shrink-0 flex-col border-r border-border/35 pr-4 last:border-r-0">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={cn('size-2 rounded-full', COLUMN_ACCENTS[status])} />
-          <span className="text-sm font-semibold text-foreground">{COLUMN_LABELS[status]}</span>
+          <span className={cn('size-2 rounded-full', getTaskStatusDotColor(status))} />
+          <span className="text-sm font-semibold text-foreground">{getTaskStatusLabel(status)}</span>
           <span className="rounded-full border border-border bg-background px-1.5 py-0.5 text-xs text-muted-foreground">
             {tasks.length}
           </span>

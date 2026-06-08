@@ -19,6 +19,7 @@ import CommentList from './comment-list'
 import DatePicker from './date-picker'
 import AssigneeSelect, { fromAssigneeValue, toAssigneeValue } from './assignee-select'
 import TaskLinks from './task-links'
+import { TASK_STATUSES, getTaskStatusLabel } from '@/lib/task-status'
 
 interface Task {
   id: string
@@ -64,7 +65,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
     <div className="flex h-full w-[27rem] flex-col border-l border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-background/55 p-4">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="capitalize">{task.status.replace('_', ' ')}</Badge>
+          <Badge variant="outline" className="capitalize">{getTaskStatusLabel(task.status)}</Badge>
           <Badge variant="secondary" className="capitalize">{task.priority}</Badge>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onClose}>
@@ -98,8 +99,8 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {['backlog','todo','in_progress','in_review','done'].map(s => (
-                    <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>
+                  {TASK_STATUSES.map(s => (
+                    <SelectItem key={s} value={s}>{getTaskStatusLabel(s)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
