@@ -14,8 +14,39 @@ export function useTasksRealtime(projectId: string) {
         schema: 'public',
         table: 'tasks',
         filter: `project_id=eq.${projectId}`,
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+      }, (payload) => {
+        const queryKey = ['tasks', projectId]
+
+        if (payload.eventType === 'INSERT') {
+          queryClient.setQueryData(queryKey, (current: unknown) => {
+            if (!Array.isArray(current)) return current
+            if (payload.new.parent_task_id || current.some((task: any) => task.id === payload.new.id)) {
+              return current
+            }
+            return [...current, { ...payload.new, task_tags: [], assignee_agent: null }]
+          })
+          return
+        }
+
+        if (payload.eventType === 'UPDATE') {
+          queryClient.setQueryData(queryKey, (current: unknown) => {
+            if (!Array.isArray(current)) return current
+            return current.map((task: any) =>
+              task.id === payload.new.id ? { ...task, ...payload.new } : task
+            )
+          })
+          return
+        }
+
+        if (payload.eventType === 'DELETE') {
+          queryClient.setQueryData(queryKey, (current: unknown) => {
+            if (!Array.isArray(current)) return current
+            return current.filter((task: any) => task.id !== payload.old.id)
+          })
+          return
+        }
+
+        queryClient.invalidateQueries({ queryKey })
       })
       .subscribe()
 

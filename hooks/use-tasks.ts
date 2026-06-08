@@ -37,7 +37,26 @@ export function useTasks(projectId: string) {
         .eq('id', taskId)
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', projectId] }),
+    onMutate: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
+      const queryKey = ['tasks', projectId]
+      await queryClient.cancelQueries({ queryKey })
+      const previousTasks = queryClient.getQueryData(queryKey)
+
+      queryClient.setQueryData(queryKey, (current: unknown) => {
+        if (!Array.isArray(current)) return current
+        return current.map((task: any) =>
+          task.id === taskId ? { ...task, status } : task
+        )
+      })
+
+      return { previousTasks }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks', projectId], context.previousTasks)
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks', projectId] }),
   })
 
   return { tasks, isLoading, error, updateStatus }
