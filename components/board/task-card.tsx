@@ -20,6 +20,7 @@ interface TaskCardProps {
   task: {
     id: string
     title: string
+    status: string
     priority: string
     due_date: string | null
     task_tags: { tags: { id: string; name: string; color: string } | null }[]
@@ -31,7 +32,7 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id })
+    useSortable({ id: task.id, data: { type: 'task', status: task.status } })
 
   const style = {
     transform: CSS.Transform.toString(transform),

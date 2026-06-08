@@ -3,7 +3,8 @@
 
 import { useState } from 'react'
 import {
-  closestCorners, DndContext, DragEndEvent, DragOverlay, DragOverEvent, PointerSensor, useSensor, useSensors
+  closestCorners, CollisionDetection, DndContext, DragEndEvent, DragOverlay, DragOverEvent,
+  pointerWithin, PointerSensor, useSensor, useSensors
 } from '@dnd-kit/core'
 import { KanbanColumn } from './kanban-column'
 import { TaskCard } from './task-card'
@@ -28,6 +29,24 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     activationConstraint: { distance: 5 }
   }))
 
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args)
+    const fallbackCollisions = pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args)
+    const collisions = fallbackCollisions.filter(collision => collision.id !== args.active.id)
+
+    const taskCollision = collisions.find(collision =>
+      collision.data?.droppableContainer.data.current?.type === 'task'
+    )
+    if (taskCollision) return [taskCollision]
+
+    const columnCollision = collisions.find(collision =>
+      collision.data?.droppableContainer.data.current?.type === 'column'
+    )
+    if (columnCollision) return [columnCollision]
+
+    return collisions
+  }
+
   const getOverStatus = (overId: string, taskList: typeof tasks) => {
     const columnStatus = STATUSES.find(status => status === overId)
     if (columnStatus) return columnStatus
@@ -47,7 +66,6 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
 
     const activeId = String(active.id)
     const overId = String(over.id)
-    if (activeId === overId) return
 
     setProjectedTasks(current => {
       const source = current ?? tasks
@@ -105,7 +123,7 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
   }, {} as Record<TaskStatus, typeof visibleTasks>)
 
   return (
-    <DndContext collisionDetection={closestCorners} sensors={sensors} onDragStart={e => {
+    <DndContext collisionDetection={collisionDetection} sensors={sensors} onDragStart={e => {
       setActiveTask(tasks.find(t => t.id === e.active.id) ?? null)
       setProjectedTasks(tasks)
     }} onDragOver={projectTaskMove} onDragCancel={() => {

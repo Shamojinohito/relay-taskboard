@@ -24,7 +24,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ status, tasks, onTaskClick, onAddTask }: KanbanColumnProps) {
-  const { isOver, setNodeRef } = useDroppable({ id: status })
+  const { isOver, setNodeRef } = useDroppable({ id: status, data: { type: 'column', status } })
 
   return (
     <div className="flex flex-col w-64 flex-shrink-0">
