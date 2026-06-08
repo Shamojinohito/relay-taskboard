@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { TaskCard } from '@/components/board/task-card'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
@@ -13,9 +14,11 @@ interface Task {
   due_date: string | null
   status: string
   project_id: string
+  assignee_user_id: string | null
+  assignee_agent_id: string | null
   project: { name: string } | null
   task_tags: { tags: { id: string; name: string; color: string } | null }[]
-  assignee_user: { email: string; raw_user_meta_data: Record<string, string> } | null
+  task_links: { id: string; url: string; title: string | null }[]
   assignee_agent: { name: string; type: string } | null
 }
 
@@ -30,33 +33,31 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function MyTasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    const loadTasks = async () => {
+  const { data: tasks = [], isLoading: loading } = useQuery({
+    queryKey: ['my-tasks'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) return []
 
-      const { data } = await (supabase.from('tasks') as any)
+      const { data, error } = await (supabase.from('tasks') as any)
         .select(`
           *,
           project:project_id(name),
           task_tags(tag_id, tags(id, name, color)),
-          assignee_user:assignee_user_id(id, email, raw_user_meta_data),
+          task_links(id, url, title),
           assignee_agent:assignee_agent_id(id, name, type)
         `)
         .eq('assignee_user_id', user.id)
         .neq('status', 'done')
         .order('due_date', { ascending: true, nullsFirst: false })
 
-      setTasks((data ?? []) as Task[])
-      setLoading(false)
-    }
-    loadTasks()
-  }, [])
+      if (error) throw error
+      return (data ?? []) as Task[]
+    },
+  })
 
   const grouped = STATUS_ORDER.reduce((acc, status) => {
     const group = (tasks as Task[]).filter(t => t.status === status)

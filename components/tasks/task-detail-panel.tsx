@@ -55,6 +55,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
     await (supabase.from('tasks') as any).update(updates).eq('id', taskId)
     setTask(prev => prev ? { ...prev, ...updates } : prev)
     queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
   }
 
   if (!task) return null

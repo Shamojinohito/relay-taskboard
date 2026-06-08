@@ -35,6 +35,7 @@ export default function TaskLinks({ taskId, projectId }: TaskLinksProps) {
 
   const refreshTaskCache = () => {
     queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
   }
 
   useEffect(() => {
