@@ -18,6 +18,7 @@ import SubtaskList from './subtask-list'
 import CommentList from './comment-list'
 import DatePicker from './date-picker'
 import AssigneeSelect, { fromAssigneeValue, toAssigneeValue } from './assignee-select'
+import TaskLinks from './task-links'
 
 interface Task {
   id: string
@@ -143,6 +144,15 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
               </div>
             </div>
           )}
+
+          <Separator />
+
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Reference Links
+            </span>
+            <TaskLinks taskId={taskId} projectId={projectId} />
+          </div>
 
           <Separator />
 

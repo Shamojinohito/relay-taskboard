@@ -1,10 +1,11 @@
 // components/board/task-card.tsx
 'use client'
 
+import type React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Badge } from '@/components/ui/badge'
-import { Bot, CalendarDays, UserRound } from 'lucide-react'
+import { Bot, CalendarDays, LinkIcon, UserRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +37,7 @@ interface TaskCardProps {
     assignee_user_id?: string | null
     assignee_agent_id?: string | null
     task_tags: { tags: { id: string; name: string; color: string } | null }[]
+    task_links?: { id: string; url: string; title: string | null }[]
     assignee_agent: { name: string; type: string } | null
   }
   onClick: () => void
@@ -62,6 +64,15 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   const assigneeId = task.assignee_agent_id ?? task.assignee_user_id
   const assigneeName = task.assignee_agent?.name ?? (task.assignee_user_id ? 'Me' : null)
   const assigneeColor = getStableColor(assigneeId)
+  const firstLink = task.task_links?.[0]
+
+  const openFirstLink = (event: React.MouseEvent | React.PointerEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (firstLink?.url) {
+      window.open(firstLink.url, '_blank', 'noopener,noreferrer')
+    }
+  }
 
   return (
     <div
@@ -94,12 +105,26 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       )}
 
       <div className="flex items-center justify-between">
-        {task.due_date && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <CalendarDays size={11} />
-            {format(new Date(task.due_date), 'yyyy.MM.dd')}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {task.due_date && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <CalendarDays size={11} />
+              {format(new Date(task.due_date), 'yyyy.MM.dd')}
+            </div>
+          )}
+          {firstLink && (
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+              title={firstLink.title ?? firstLink.url}
+              onPointerDown={openFirstLink}
+              onClick={openFirstLink}
+            >
+              <LinkIcon size={12} />
+              {task.task_links && task.task_links.length > 1 && <span>{task.task_links.length}</span>}
+            </button>
+          )}
+        </div>
         <div className="ml-auto">
           {assigneeName ? (
             <div className="flex max-w-32 items-center gap-1.5 truncate text-xs text-muted-foreground">

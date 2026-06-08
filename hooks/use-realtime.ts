@@ -23,7 +23,7 @@ export function useTasksRealtime(projectId: string) {
             if (payload.new.parent_task_id || current.some((task: any) => task.id === payload.new.id)) {
               return current
             }
-            return [...current, { ...payload.new, task_tags: [], assignee_agent: null }]
+            return [...current, { ...payload.new, task_tags: [], task_links: [], assignee_agent: null }]
           })
           queryClient.invalidateQueries({ queryKey })
           return

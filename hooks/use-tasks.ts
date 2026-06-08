@@ -18,6 +18,7 @@ export function useTasks(projectId: string) {
         .select(`
           *,
           task_tags(tag_id, tags(id, name, color)),
+          task_links(id, url, title),
           assignee_agent:assignee_agent_id(id, name, type)
         `)
         .eq('project_id', projectId)
