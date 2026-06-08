@@ -20,30 +20,60 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const queryClient = useQueryClient()
   const supabase = createClient()
 
   const handleCreate = async () => {
     if (!name.trim()) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    setErrorMessage('')
 
-    const { data: project, error } = await supabase
-      .from('projects')
-      .insert({ name: name.trim(), description: description.trim() || null, owner_id: user.id } as any)
-      .select()
-      .single()
+    let { data: project, error } = await (supabase as any)
+      .rpc('create_project', {
+        project_name: name.trim(),
+        project_description: description.trim() || null,
+      })
 
-    if (!error && project) {
-      await supabase.from('project_members').insert({
-        project_id: (project as any).id, user_id: user.id, role: 'owner'
-      } as any)
+    if (error?.code === '42883' || error?.code === 'PGRST202') {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        setErrorMessage(userError?.message ?? 'ログイン状態を確認できませんでした。再ログインしてください。')
+        setLoading(false)
+        return
+      }
+
+      const directResult = await supabase
+        .from('projects')
+        .insert({
+          name: name.trim(),
+          description: description.trim() || null,
+          owner_id: user.id,
+        } as any)
+        .select()
+        .single()
+
+      project = directResult.data
+      error = directResult.error
+
+      if (!error && project) {
+        await supabase.from('project_members').insert({
+          project_id: (project as any).id,
+          user_id: user.id,
+          role: 'owner',
+        } as any)
+      }
+    }
+
+    if (error) {
+      setErrorMessage(error.message)
+    } else if (project) {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       setName('')
       setDescription('')
       onOpenChange(false)
     }
+
     setLoading(false)
   }
 
@@ -63,6 +93,11 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
             <Textarea value={description} onChange={e => setDescription(e.target.value)}
               placeholder="Optional description" />
           </div>
+          {errorMessage && (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
