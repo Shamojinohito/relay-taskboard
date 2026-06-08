@@ -12,7 +12,7 @@ import { useState } from 'react'
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { projects } = useProjects()
+  const { projects, error } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
 
   return (
@@ -60,6 +60,12 @@ export default function Sidebar() {
               </div>
             </Link>
           ))}
+
+          {error && (
+            <p className="px-3 py-2 text-xs text-destructive">
+              Failed to load projects
+            </p>
+          )}
 
           <div className="pt-3 pb-1 px-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

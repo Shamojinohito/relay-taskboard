@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 export function useProjects() {
   const supabase = createClient()
 
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projects = [], isLoading, error } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -17,5 +17,5 @@ export function useProjects() {
     },
   })
 
-  return { projects, isLoading }
+  return { projects, isLoading, error }
 }

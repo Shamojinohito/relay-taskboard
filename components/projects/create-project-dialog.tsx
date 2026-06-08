@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
@@ -22,6 +23,7 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const queryClient = useQueryClient()
+  const router = useRouter()
   const supabase = createClient()
 
   const handleCreate = async () => {
@@ -68,10 +70,17 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
     if (error) {
       setErrorMessage(error.message)
     } else if (project) {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.setQueryData(['projects'], (current: unknown) => {
+        if (!Array.isArray(current)) return [project]
+        if (current.some((item: any) => item.id === (project as any).id)) return current
+        return [...current, project]
+      })
+      await queryClient.invalidateQueries({ queryKey: ['projects'] })
+      await queryClient.refetchQueries({ queryKey: ['projects'] })
       setName('')
       setDescription('')
       onOpenChange(false)
+      router.push(`/projects/${(project as any).id}`)
     }
 
     setLoading(false)
