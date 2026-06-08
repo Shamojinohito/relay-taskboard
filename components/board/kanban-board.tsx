@@ -1,7 +1,7 @@
 // components/board/kanban-board.tsx
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   closestCorners, CollisionDetection, DndContext, DragEndEvent, DragOverlay, DragOverEvent,
   pointerWithin, PointerSensor, useSensor, useSensors
@@ -29,7 +29,7 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     activationConstraint: { distance: 5 }
   }))
 
-  const collisionDetection: CollisionDetection = (args) => {
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
     const pointerCollisions = pointerWithin(args)
     const fallbackCollisions = pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args)
     const collisions = fallbackCollisions.filter(collision => collision.id !== args.active.id)
@@ -45,7 +45,7 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     if (columnCollision) return [columnCollision]
 
     return collisions
-  }
+  }, [])
 
   const getOverStatus = (overId: string, taskList: typeof tasks) => {
     const columnStatus = STATUSES.find(status => status === overId)
@@ -79,6 +79,8 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
       let nextTasks: typeof source
 
       if (overIndex === -1) {
+        if (movingTask.status === overStatus) return source
+
         const lastIndexInColumn = withoutMoving.reduce((lastIndex, task, index) =>
           task.status === overStatus ? index : lastIndex
         , -1)
