@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/select'
 import SubtaskList from './subtask-list'
 import CommentList from './comment-list'
+import DatePicker from './date-picker'
+import AssigneeSelect, { fromAssigneeValue, toAssigneeValue } from './assignee-select'
 
 interface Task {
   id: string
@@ -24,6 +26,8 @@ interface Task {
   status: string
   priority: string
   due_date: string | null
+  assignee_user_id: string | null
+  assignee_agent_id: string | null
   task_tags: { tags: { id: string; name: string; color: string } | null }[]
 }
 
@@ -112,8 +116,19 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
 
           <div className="space-y-1">
             <span className="text-xs text-muted-foreground">Due Date</span>
-            <Input type="date" value={task.due_date ?? ''} className="h-8 text-sm"
-              onChange={e => updateTask({ due_date: e.target.value || null })} />
+            <DatePicker
+              value={task.due_date ?? ''}
+              onChange={value => updateTask({ due_date: value || null })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">Assignee</span>
+            <AssigneeSelect
+              value={toAssigneeValue(task.assignee_user_id, task.assignee_agent_id)}
+              onChange={value => updateTask(fromAssigneeValue(value))}
+              className="h-8 w-full text-sm"
+            />
           </div>
 
           {task.task_tags.length > 0 && (

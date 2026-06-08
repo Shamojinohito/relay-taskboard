@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
+import DatePicker from './date-picker'
+import AssigneeSelect, { fromAssigneeValue, type AssigneeValue } from './assignee-select'
 
 interface TaskFormProps {
   projectId: string
@@ -27,6 +29,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
   const [dueDate, setDueDate] = useState('')
+  const [assignee, setAssignee] = useState<AssigneeValue>('none')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const queryClient = useQueryClient()
@@ -53,6 +56,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
         status: initialStatus,
         priority,
         due_date: dueDate || null,
+        ...fromAssigneeValue(assignee),
         created_by_user_id: user.id,
       })
       .select(`
@@ -111,8 +115,12 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
             </div>
             <div className="space-y-2">
               <Label>Due Date</Label>
-              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              <DatePicker value={dueDate} onChange={setDueDate} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Assignee</Label>
+            <AssigneeSelect value={assignee} onChange={setAssignee} className="w-full" />
           </div>
           {errorMessage && (
             <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
