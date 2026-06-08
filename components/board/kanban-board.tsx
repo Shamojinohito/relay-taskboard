@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import {
-  DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors
+  closestCorners, DndContext, DragEndEvent, DragOverlay, DragOverEvent, PointerSensor, useSensor, useSensors
 } from '@dnd-kit/core'
 import { KanbanColumn } from './kanban-column'
 import { TaskCard } from './task-card'
@@ -22,30 +22,84 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
   useTasksRealtime(projectId)
   const { tasks, error, updateStatus } = useTasks(projectId)
   const [activeTask, setActiveTask] = useState<(typeof tasks)[0] | null>(null)
+  const [projectedTasks, setProjectedTasks] = useState<typeof tasks | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { distance: 5 }
   }))
 
+  const getOverStatus = (overId: string, taskList: typeof tasks) => {
+    const columnStatus = STATUSES.find(status => status === overId)
+    if (columnStatus) return columnStatus
+    return taskList.find(task => task.id === overId)?.status as TaskStatus | undefined
+  }
+
+  const projectTaskMove = (event: DragOverEvent) => {
+    const { active, over } = event
+    if (!over) return
+
+    const activeId = String(active.id)
+    const overId = String(over.id)
+
+    setProjectedTasks(current => {
+      const source = current ?? tasks
+      const movingTask = source.find(task => task.id === activeId)
+      const overStatus = getOverStatus(overId, source)
+      if (!movingTask || !overStatus) return source
+
+      const withoutMoving = source.filter(task => task.id !== activeId)
+      const nextMovingTask = { ...movingTask, status: overStatus }
+      const overIndex = withoutMoving.findIndex(task => task.id === overId)
+
+      if (overIndex === -1) {
+        const lastIndexInColumn = withoutMoving.reduce((lastIndex, task, index) =>
+          task.status === overStatus ? index : lastIndex
+        , -1)
+        const insertIndex = lastIndexInColumn === -1 ? withoutMoving.length : lastIndexInColumn + 1
+        return [
+          ...withoutMoving.slice(0, insertIndex),
+          nextMovingTask,
+          ...withoutMoving.slice(insertIndex),
+        ]
+      }
+
+      return [
+        ...withoutMoving.slice(0, overIndex),
+        nextMovingTask,
+        ...withoutMoving.slice(overIndex),
+      ]
+    })
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveTask(null)
-    if (!over || active.id === over.id) return
+    setProjectedTasks(null)
+    if (!over) return
 
-    const newStatus = STATUSES.find(s => s === over.id)
-    if (newStatus) {
-      updateStatus.mutate({ taskId: active.id as string, status: newStatus })
+    const newStatus = getOverStatus(String(over.id), projectedTasks ?? tasks)
+    const currentStatus = tasks.find(task => task.id === active.id)?.status
+    const projectedStatus = (projectedTasks ?? tasks).find(task => task.id === active.id)?.status
+    const nextStatus = newStatus ?? projectedStatus
+
+    if (nextStatus && nextStatus !== currentStatus) {
+      updateStatus.mutate({ taskId: active.id as string, status: nextStatus })
     }
   }
 
+  const visibleTasks = projectedTasks ?? tasks
   const tasksByStatus = STATUSES.reduce((acc, status) => {
-    acc[status] = tasks.filter(t => t.status === status)
+    acc[status] = visibleTasks.filter(t => t.status === status)
     return acc
-  }, {} as Record<TaskStatus, typeof tasks>)
+  }, {} as Record<TaskStatus, typeof visibleTasks>)
 
   return (
-    <DndContext sensors={sensors} onDragStart={e => {
+    <DndContext collisionDetection={closestCorners} sensors={sensors} onDragStart={e => {
       setActiveTask(tasks.find(t => t.id === e.active.id) ?? null)
+      setProjectedTasks(tasks)
+    }} onDragOver={projectTaskMove} onDragCancel={() => {
+      setActiveTask(null)
+      setProjectedTasks(null)
     }} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 p-6 overflow-x-auto h-full">
         {error && (
