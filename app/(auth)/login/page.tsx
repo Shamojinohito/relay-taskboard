@@ -14,10 +14,16 @@ export default function LoginPage() {
   const supabase = createClient()
 
   const signInWithGitHub = async () => {
-    await supabase.auth.signInWithOAuth({
+    setLoading(true)
+    setMessage('')
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: { redirectTo: `${location.origin}/auth/callback` },
     })
+    if (error) {
+      setMessage(error.message)
+      setLoading(false)
+    }
   }
 
   const signInWithEmail = async (e: React.FormEvent) => {
@@ -46,7 +52,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground mt-1">AI-Human collaborative tasks</p>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={signInWithGitHub}>
+        <Button variant="outline" className="w-full" onClick={signInWithGitHub} disabled={loading}>
           Continue with GitHub
         </Button>
 
