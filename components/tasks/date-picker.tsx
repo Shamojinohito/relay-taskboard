@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { addMonths, format, getDay, isSameDay, parseISO, startOfMonth, subMonths } from 'date-fns'
+import { useEffect, useMemo, useState } from 'react'
+import { addMonths, format, getDay, isSameDay, isValid, parse, parseISO, startOfMonth, subMonths } from 'date-fns'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,12 @@ const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 export default function DatePicker({ value, onChange, className }: DatePickerProps) {
   const selectedDate = value ? parseISO(value) : null
   const [open, setOpen] = useState(false)
+  const [inputValue, setInputValue] = useState(() => selectedDate ? format(selectedDate, 'yyyy.MM.dd') : '')
   const [visibleMonth, setVisibleMonth] = useState(() => selectedDate ?? new Date())
+
+  useEffect(() => {
+    setInputValue(selectedDate ? format(selectedDate, 'yyyy.MM.dd') : '')
+  }, [value])
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(visibleMonth)
@@ -37,7 +42,22 @@ export default function DatePicker({ value, onChange, className }: DatePickerPro
 
   const selectDate = (date: Date) => {
     onChange(format(date, 'yyyy-MM-dd'))
+    setInputValue(format(date, 'yyyy.MM.dd'))
     setOpen(false)
+  }
+
+  const handleTextChange = (text: string) => {
+    setInputValue(text)
+
+    if (!text.trim()) {
+      onChange('')
+      return
+    }
+
+    const parsedDate = parse(text, 'yyyy.MM.dd', new Date())
+    if (isValid(parsedDate)) {
+      onChange(format(parsedDate, 'yyyy-MM-dd'))
+    }
   }
 
   return (
@@ -54,9 +74,10 @@ export default function DatePicker({ value, onChange, className }: DatePickerPro
           <span className="sr-only">Open calendar</span>
         </Button>
         <Input
-          type="date"
-          value={value}
-          onChange={event => onChange(event.target.value)}
+          type="text"
+          value={inputValue}
+          onChange={event => handleTextChange(event.target.value)}
+          placeholder="yyyy.MM.dd"
           className="h-full flex-1 border-0 bg-transparent px-2 text-sm focus-visible:ring-0"
         />
       </div>
