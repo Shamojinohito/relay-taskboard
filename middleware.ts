@@ -28,6 +28,11 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
+  // OAuthコールバックはセッション交換前なので認証スキップ
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return supabaseResponse
+  }
+
   if (!user && !request.nextUrl.pathname.startsWith('/login')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
