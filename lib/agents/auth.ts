@@ -1,5 +1,5 @@
 // lib/agents/auth.ts
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export async function validateAgentApiKey(apiKey: string) {
   const encoder = new TextEncoder()
@@ -8,7 +8,7 @@ export async function validateAgentApiKey(apiKey: string) {
   const hashedKey = Array.from(new Uint8Array(hash))
     .map(b => b.toString(16).padStart(2, '0')).join('')
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data: agent, error } = await (supabase.from('agents') as any)
     .select('*')
     .eq('api_key', hashedKey)

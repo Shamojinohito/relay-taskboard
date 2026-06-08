@@ -1,7 +1,7 @@
 // app/api/agent/tasks/route.ts
 import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 async function getAgentFromRequest(request: Request) {
   const auth = request.headers.get('Authorization')
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   let query = (supabase.from('tasks') as any)
     .select('*, task_comments(id, body, created_at, author_agent_id)')
     .eq('assignee_agent_id', agent.agentId)

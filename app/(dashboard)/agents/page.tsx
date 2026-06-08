@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { AgentList } from '@/components/agents/agent-list'
 import { AgentRunLog } from '@/components/agents/agent-run-log'
+import { CodexSetup } from '@/components/agents/codex-setup'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Play } from 'lucide-react'
@@ -62,10 +63,14 @@ export default function AgentsPage() {
       <Tabs defaultValue="agents">
         <TabsList>
           <TabsTrigger value="agents">Agents</TabsTrigger>
+          <TabsTrigger value="codex">Codex Setup</TabsTrigger>
           <TabsTrigger value="runs">Run Log</TabsTrigger>
         </TabsList>
         <TabsContent value="agents" className="mt-4">
           <AgentList agents={agents} />
+        </TabsContent>
+        <TabsContent value="codex" className="mt-4">
+          <CodexSetup />
         </TabsContent>
         <TabsContent value="runs" className="mt-4">
           <AgentRunLog runs={runs} />

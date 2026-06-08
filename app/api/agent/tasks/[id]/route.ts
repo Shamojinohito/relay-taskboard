@@ -1,7 +1,7 @@
 // app/api/agent/tasks/[id]/route.ts
 import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 async function getAgentFromRequest(request: Request) {
   const auth = request.headers.get('Authorization')
@@ -27,7 +27,7 @@ export async function PATCH(
   const body = await request.json().catch(() => ({}))
   const { comment, status, assignee_user_id, assignee_agent_id, priority } = body
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const updates: Record<string, unknown> = {}
   if (status) updates.status = status
