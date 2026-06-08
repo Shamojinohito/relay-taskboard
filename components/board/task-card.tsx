@@ -10,10 +10,10 @@ import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 const PRIORITY_COLORS = {
-  low: 'border-l-sky-400',
-  medium: 'border-l-amber-400',
-  high: 'border-l-orange-500',
-  urgent: 'border-l-rose-500',
+  low: 'border-l-sky-400 hover:border-l-sky-300',
+  medium: 'border-l-amber-400 hover:border-l-amber-300',
+  high: 'border-l-orange-500 hover:border-l-orange-400',
+  urgent: 'border-l-rose-500 hover:border-l-rose-400',
 } as const
 
 const ASSIGNEE_COLORS = [
@@ -82,13 +82,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       {...listeners}
       onClick={onClick}
       className={cn(
-        'bg-card border border-l-4 border-border rounded-lg p-3 cursor-pointer hover:border-primary/50 transition-colors space-y-2',
+        'group bg-card/95 border border-l-4 border-border rounded-lg p-3 cursor-pointer shadow-sm shadow-black/15 transition-all space-y-2 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-card hover:shadow-md hover:shadow-black/25',
         PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS] ?? 'border-l-muted'
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm text-foreground leading-snug">{task.title}</p>
-        <span className="rounded border border-border px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+        <p className="text-sm font-medium leading-snug text-foreground">{task.title}</p>
+        <span className="rounded-md border border-border bg-background/65 px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
           {task.priority}
         </span>
       </div>
@@ -115,7 +115,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           {firstLink && (
             <button
               type="button"
-              className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="flex items-center gap-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
               title={firstLink.title ?? firstLink.url}
               onPointerDown={openFirstLink}
               onClick={openFirstLink}
@@ -127,8 +127,8 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         </div>
         <div className="ml-auto">
           {assigneeName ? (
-            <div className="flex max-w-32 items-center gap-1.5 truncate text-xs text-muted-foreground">
-              <span className="size-2 rounded-full" style={{ backgroundColor: assigneeColor }} />
+            <div className="flex max-w-32 items-center gap-1.5 truncate rounded-md bg-background/60 px-1.5 py-0.5 text-xs text-muted-foreground">
+              <span className="size-2 rounded-full ring-2 ring-background" style={{ backgroundColor: assigneeColor }} />
               {task.assignee_agent ? <Bot size={12} /> : <UserRound size={12} />}
               <span className="truncate">{assigneeName}</span>
             </div>

@@ -132,7 +132,7 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
       setActiveTask(null)
       setProjectedTasks(null)
     }} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 p-6 overflow-x-auto h-full">
+      <div className="flex h-full gap-5 overflow-x-auto bg-background px-6 py-5">
         {error && (
           <div className="w-80 flex-shrink-0 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
             Failed to load tasks: {(error as Error).message}

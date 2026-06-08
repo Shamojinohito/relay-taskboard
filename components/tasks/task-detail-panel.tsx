@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { CalendarDays, LinkIcon, MessageSquareText, Network, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -61,21 +61,24 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
   if (!task) return null
 
   return (
-    <div className="w-96 border-l border-border bg-card flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <Badge variant="outline">{task.status.replace('_', ' ')}</Badge>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+    <div className="flex h-full w-[27rem] flex-col border-l border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border bg-background/55 p-4">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="capitalize">{task.status.replace('_', ' ')}</Badge>
+          <Badge variant="secondary" className="capitalize">{task.priority}</Badge>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onClose}>
           <X size={16} />
         </Button>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="space-y-5 p-5">
           <Input
             value={task.title}
             onChange={e => setTask(prev => prev ? { ...prev, title: e.target.value } : prev)}
             onBlur={e => updateTask({ title: e.target.value })}
-            className="text-base font-medium border-transparent bg-transparent px-0 focus-visible:ring-0"
+            className="h-auto border-transparent bg-transparent px-0 text-lg font-semibold leading-tight focus-visible:ring-0"
           />
 
           <Textarea
@@ -83,11 +86,11 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
             onChange={e => setTask(prev => prev ? { ...prev, description: e.target.value } : prev)}
             onBlur={e => updateTask({ description: e.target.value || null })}
             placeholder="Add description..."
-            className="border-transparent bg-transparent px-0 focus-visible:ring-0 text-sm text-muted-foreground resize-none"
+            className="min-h-24 resize-none rounded-lg border-border bg-background/45 text-sm text-muted-foreground focus-visible:ring-1"
             rows={3}
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-background/35 p-3">
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground">Status</span>
               <Select value={task.status} onValueChange={v => v && updateTask({ status: v })}>
@@ -116,15 +119,18 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
             </div>
           </div>
 
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">Due Date</span>
+          <div className="space-y-1 rounded-lg border border-border bg-background/35 p-3">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays size={12} />
+              Due Date
+            </span>
             <DatePicker
               value={task.due_date ?? ''}
               onChange={value => updateTask({ due_date: value || null })}
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 rounded-lg border border-border bg-background/35 p-3">
             <span className="text-xs text-muted-foreground">Assignee</span>
             <AssigneeSelect
               value={toAssigneeValue(task.assignee_user_id, task.assignee_agent_id)}
@@ -149,7 +155,8 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
           <Separator />
 
           <div className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <LinkIcon size={12} />
               Reference Links
             </span>
             <TaskLinks taskId={taskId} projectId={projectId} />
@@ -158,7 +165,8 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
           <Separator />
 
           <div className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <Network size={12} />
               Subtasks
             </span>
             <SubtaskList parentTaskId={taskId} projectId={projectId} />
@@ -167,7 +175,8 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
           <Separator />
 
           <div className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <MessageSquareText size={12} />
               Comments & Instructions
             </span>
             <CommentList taskId={taskId} />

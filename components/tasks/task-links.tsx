@@ -86,7 +86,7 @@ export default function TaskLinks({ taskId, projectId }: TaskLinksProps) {
       {links.length > 0 && (
         <div className="space-y-1">
           {links.map(link => (
-            <div key={link.id} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+            <div key={link.id} className="flex items-center gap-2 rounded-lg border border-border bg-background/35 p-2 text-sm">
               <LinkIcon size={14} className="text-muted-foreground" />
               <a
                 href={link.url}
@@ -105,7 +105,7 @@ export default function TaskLinks({ taskId, projectId }: TaskLinksProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-border bg-background/35 p-2">
         <Input value={url} onChange={event => setUrl(event.target.value)} placeholder="https://..." className="h-8" />
         <Input value={title} onChange={event => setTitle(event.target.value)} placeholder="Title" className="h-8" />
         <Button size="icon-sm" onClick={addLink} disabled={!url.trim()}>

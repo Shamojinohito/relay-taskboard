@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { TaskCard } from '@/components/board/task-card'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
 import { Badge } from '@/components/ui/badge'
+import { CheckSquare } from 'lucide-react'
 
 interface Task {
   id: string
@@ -70,8 +71,17 @@ export default function MyTasksPage() {
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-auto">
-        <div className="max-w-2xl mx-auto px-6 py-6">
-          <h1 className="text-xl font-semibold mb-6">My Tasks</h1>
+        <div className="mx-auto max-w-3xl px-6 py-7">
+          <div className="mb-7 flex items-center justify-between">
+            <div>
+              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                <CheckSquare size={21} className="text-primary" />
+                My Tasks
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">Assigned work collected across projects.</p>
+            </div>
+            <Badge variant="outline" className="px-2 py-1">{tasks.length} open</Badge>
+          </div>
 
           {loading ? (
             <div className="text-muted-foreground text-sm">Loading...</div>
@@ -80,20 +90,19 @@ export default function MyTasksPage() {
               <p>No tasks assigned to you.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-7">
               {Object.entries(grouped).map(([status, groupTasks]) => (
                 <div key={status}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm font-medium text-foreground">
+                  <div className="mb-3 flex items-center gap-2 border-b border-border pb-2">
+                    <span className="text-sm font-semibold text-foreground">
                       {STATUS_LABELS[status]}
                     </span>
                     <Badge variant="secondary" className="text-xs">{groupTasks.length}</Badge>
                   </div>
                   <div className="space-y-2">
                     {groupTasks.map(task => (
-                      <div key={task.id} className="relative pl-2">
-                        <div className="absolute -left-8 top-3 text-[10px] text-muted-foreground
-                          bg-secondary px-1.5 py-0.5 rounded whitespace-nowrap hidden sm:block">
+                      <div key={task.id} className="relative">
+                        <div className="mb-1 inline-flex rounded-md border border-border bg-card px-1.5 py-0.5 text-[10px] text-muted-foreground sm:absolute sm:-left-24 sm:top-3 sm:mb-0">
                           {task.project?.name}
                         </div>
                         <TaskCard
