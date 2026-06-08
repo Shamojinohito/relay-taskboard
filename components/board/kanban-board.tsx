@@ -34,12 +34,20 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     return taskList.find(task => task.id === overId)?.status as TaskStatus | undefined
   }
 
+  const isSameTaskProjection = (left: typeof tasks, right: typeof tasks) => {
+    if (left.length !== right.length) return false
+    return left.every((task, index) =>
+      task.id === right[index]?.id && task.status === right[index]?.status
+    )
+  }
+
   const projectTaskMove = (event: DragOverEvent) => {
     const { active, over } = event
     if (!over) return
 
     const activeId = String(active.id)
     const overId = String(over.id)
+    if (activeId === overId) return
 
     setProjectedTasks(current => {
       const source = current ?? tasks
@@ -50,24 +58,27 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
       const withoutMoving = source.filter(task => task.id !== activeId)
       const nextMovingTask = { ...movingTask, status: overStatus }
       const overIndex = withoutMoving.findIndex(task => task.id === overId)
+      let nextTasks: typeof source
 
       if (overIndex === -1) {
         const lastIndexInColumn = withoutMoving.reduce((lastIndex, task, index) =>
           task.status === overStatus ? index : lastIndex
         , -1)
         const insertIndex = lastIndexInColumn === -1 ? withoutMoving.length : lastIndexInColumn + 1
-        return [
+        nextTasks = [
           ...withoutMoving.slice(0, insertIndex),
           nextMovingTask,
           ...withoutMoving.slice(insertIndex),
         ]
+      } else {
+        nextTasks = [
+          ...withoutMoving.slice(0, overIndex),
+          nextMovingTask,
+          ...withoutMoving.slice(overIndex),
+        ]
       }
 
-      return [
-        ...withoutMoving.slice(0, overIndex),
-        nextMovingTask,
-        ...withoutMoving.slice(overIndex),
-      ]
+      return isSameTaskProjection(source, nextTasks) ? source : nextTasks
     })
   }
 
