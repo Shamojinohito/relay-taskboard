@@ -28,26 +28,55 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
   const [dueDate, setDueDate] = useState('')
   const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const queryClient = useQueryClient()
   const supabase = createClient()
 
   const handleCreate = async () => {
     if (!title.trim()) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    setErrorMessage('')
 
-    await (supabase.from('tasks') as any).insert({
-      project_id: projectId,
-      parent_task_id: parentTaskId ?? null,
-      title: title.trim(),
-      description: description.trim() || null,
-      status: initialStatus,
-      priority,
-      due_date: dueDate || null,
-      created_by_user_id: user?.id,
-    })
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      setErrorMessage(userError?.message ?? 'ログイン状態を確認できませんでした。再ログインしてください。')
+      setLoading(false)
+      return
+    }
 
-    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    const { data: task, error } = await (supabase.from('tasks') as any)
+      .insert({
+        project_id: projectId,
+        parent_task_id: parentTaskId ?? null,
+        title: title.trim(),
+        description: description.trim() || null,
+        status: initialStatus,
+        priority,
+        due_date: dueDate || null,
+        created_by_user_id: user.id,
+      })
+      .select(`
+        *,
+        task_tags(tag_id, tags(id, name, color)),
+        assignee_agent:assignee_agent_id(id, name, type)
+      `)
+      .single()
+
+    if (error) {
+      setErrorMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    if (task && !parentTaskId) {
+      queryClient.setQueryData(['tasks', projectId], (current: unknown) => {
+        if (!Array.isArray(current)) return [task]
+        if (current.some((item: any) => item.id === task.id)) return current
+        return [...current, task]
+      })
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
     setLoading(false)
     onClose()
   }
@@ -85,6 +114,11 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
               <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
             </div>
           </div>
+          {errorMessage && (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>

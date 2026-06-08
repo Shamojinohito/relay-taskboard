@@ -20,7 +20,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardProps) {
   useTasksRealtime(projectId)
-  const { tasks, updateStatus } = useTasks(projectId)
+  const { tasks, error, updateStatus } = useTasks(projectId)
   const [activeTask, setActiveTask] = useState<(typeof tasks)[0] | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, {
@@ -48,6 +48,11 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
       setActiveTask(tasks.find(t => t.id === e.active.id) ?? null)
     }} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 p-6 overflow-x-auto h-full">
+        {error && (
+          <div className="w-80 flex-shrink-0 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            Failed to load tasks: {(error as Error).message}
+          </div>
+        )}
         {STATUSES.map(status => (
           <KanbanColumn
             key={status}

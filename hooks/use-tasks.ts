@@ -9,7 +9,7 @@ export function useTasks(projectId: string) {
   const supabase = createClient() as any
   const queryClient = useQueryClient()
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['tasks', projectId],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queryFn: async (): Promise<any[]> => {
@@ -18,7 +18,6 @@ export function useTasks(projectId: string) {
         .select(`
           *,
           task_tags(tag_id, tags(id, name, color)),
-          assignee_user:assignee_user_id(id, email, raw_user_meta_data),
           assignee_agent:assignee_agent_id(id, name, type)
         `)
         .eq('project_id', projectId)
@@ -41,5 +40,5 @@ export function useTasks(projectId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', projectId] }),
   })
 
-  return { tasks, isLoading, updateStatus }
+  return { tasks, isLoading, error, updateStatus }
 }

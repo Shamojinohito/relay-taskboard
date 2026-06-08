@@ -23,7 +23,7 @@ interface TaskCardProps {
     priority: string
     due_date: string | null
     task_tags: { tags: { id: string; name: string; color: string } | null }[]
-    assignee_user: { email: string; raw_user_meta_data: Record<string, string> } | null
+    assignee_user?: { email: string; raw_user_meta_data: Record<string, string> } | null
     assignee_agent: { name: string; type: string } | null
   }
   onClick: () => void
