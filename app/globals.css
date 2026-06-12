@@ -49,7 +49,7 @@
 }
 
 :root {
-  /* Dark theme as default (AirFlow is dark-only) */
+  /* Dark theme as default (Relay is dark-only) */
   --background: oklch(0.12 0.015 248);
   --foreground: oklch(0.93 0.015 225);
   --card: oklch(0.165 0.018 246);

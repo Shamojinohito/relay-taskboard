@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import DatePicker from './date-picker'
 import AssigneeSelect, { fromAssigneeValue, type AssigneeValue } from './assignee-select'
+import { TASK_ACTION_TYPES, TASK_ACTION_TYPE_LABELS, type TaskActionType } from '@/lib/task-workflow'
 
 interface TaskFormProps {
   projectId: string
@@ -28,6 +29,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
+  const [actionType, setActionType] = useState<TaskActionType>('other')
   const [dueDate, setDueDate] = useState('')
   const [assignee, setAssignee] = useState<AssigneeValue>('none')
   const [loading, setLoading] = useState(false)
@@ -55,6 +57,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
         description: description.trim() || null,
         status: initialStatus,
         priority,
+        action_type: actionType,
         due_date: dueDate || null,
         ...fromAssigneeValue(assignee),
         created_by_user_id: user.id,
@@ -118,6 +121,17 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
               <Label>Due Date</Label>
               <DatePicker value={dueDate} onChange={setDueDate} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Action Type</Label>
+            <Select value={actionType} onValueChange={v => setActionType(v as TaskActionType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TASK_ACTION_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>{TASK_ACTION_TYPE_LABELS[type]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Assignee</Label>

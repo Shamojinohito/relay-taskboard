@@ -20,6 +20,7 @@ import DatePicker from './date-picker'
 import AssigneeSelect, { fromAssigneeValue, toAssigneeValue } from './assignee-select'
 import TaskLinks from './task-links'
 import { TASK_STATUSES, getTaskStatusLabel } from '@/lib/task-status'
+import { TASK_ACTION_TYPES, TASK_ACTION_TYPE_LABELS } from '@/lib/task-workflow'
 
 interface Task {
   id: string
@@ -27,6 +28,9 @@ interface Task {
   description: string | null
   status: string
   priority: string
+  action_type: string
+  handoff_note: string | null
+  blocked_reason: string | null
   due_date: string | null
   assignee_user_id: string | null
   assignee_agent_id: string | null
@@ -106,6 +110,19 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
               </Select>
             </div>
             <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Action Type</span>
+              <Select value={task.action_type ?? 'other'} onValueChange={v => v && updateTask({ action_type: v })}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_ACTION_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{TASK_ACTION_TYPE_LABELS[type]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
               <span className="text-xs text-muted-foreground">Priority</span>
               <Select value={task.priority} onValueChange={v => v && updateTask({ priority: v })}>
                 <SelectTrigger className="h-8 text-sm">
@@ -119,6 +136,32 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
               </Select>
             </div>
           </div>
+
+          <div className="space-y-2 rounded-lg border border-border bg-background/35 p-3">
+            <span className="text-xs text-muted-foreground">Handoff Note</span>
+            <Textarea
+              value={task.handoff_note ?? ''}
+              onChange={e => setTask(prev => prev ? { ...prev, handoff_note: e.target.value } : prev)}
+              onBlur={e => updateTask({ handoff_note: e.target.value || null })}
+              placeholder="What changed, why, and what the next owner should do..."
+              className="min-h-20 resize-none rounded-md bg-background/55 text-sm"
+              rows={3}
+            />
+          </div>
+
+          {task.status === 'blocked' && (
+            <div className="space-y-2 rounded-lg border border-rose-500/35 bg-rose-500/10 p-3">
+              <span className="text-xs text-rose-200">Blocked Reason</span>
+              <Textarea
+                value={task.blocked_reason ?? ''}
+                onChange={e => setTask(prev => prev ? { ...prev, blocked_reason: e.target.value } : prev)}
+                onBlur={e => updateTask({ blocked_reason: e.target.value || null })}
+                placeholder="Why this task is blocked..."
+                className="min-h-20 resize-none rounded-md border-rose-500/30 bg-background/70 text-sm"
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="space-y-1 rounded-lg border border-border bg-background/35 p-3">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

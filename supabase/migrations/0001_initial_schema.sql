@@ -46,15 +46,20 @@ CREATE TABLE tasks (
   title                TEXT NOT NULL,
   description          TEXT,
   status               TEXT NOT NULL DEFAULT 'backlog'
-                         CHECK (status IN ('backlog','todo','in_progress','on_hold','in_review','done')),
+                         CHECK (status IN ('backlog','todo','in_progress','on_hold','blocked','in_review','done')),
   priority             TEXT NOT NULL DEFAULT 'medium'
                          CHECK (priority IN ('low','medium','high','urgent')),
+  action_type          TEXT NOT NULL DEFAULT 'other'
+                         CHECK (action_type IN ('content','research','review','publish','setup','other')),
+  handoff_note         TEXT,
+  blocked_reason       TEXT,
   assignee_user_id     UUID REFERENCES auth.users(id),
   assignee_agent_id    UUID REFERENCES agents(id),
   created_by_user_id   UUID REFERENCES auth.users(id),
   created_by_agent_id  UUID REFERENCES agents(id),
   due_date             DATE,
   position             INTEGER DEFAULT 0,
+  last_status_changed_at TIMESTAMPTZ DEFAULT NOW(),
   created_at           TIMESTAMPTZ DEFAULT NOW(),
   updated_at           TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT single_assignee CHECK (
@@ -100,6 +105,20 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER tasks_updated_at
   BEFORE UPDATE ON tasks
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE OR REPLACE FUNCTION update_task_status_changed_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    NEW.last_status_changed_at = NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tasks_status_changed_at
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW EXECUTE FUNCTION update_task_status_changed_at();
 
 -- Indexes
 CREATE INDEX idx_tasks_project_id ON tasks(project_id);

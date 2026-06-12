@@ -25,13 +25,25 @@ export async function PATCH(
 
   const { id } = await params
   const body = await request.json().catch(() => ({}))
-  const { comment, status, assignee_user_id, assignee_agent_id, priority } = body
+  const {
+    action_type,
+    blocked_reason,
+    comment,
+    handoff_note,
+    priority,
+    assignee_agent_id,
+    assignee_user_id,
+    status,
+  } = body
 
   const supabase = createServiceClient()
 
   const updates: Record<string, unknown> = {}
   if (status) updates.status = status
   if (priority) updates.priority = priority
+  if (action_type) updates.action_type = action_type
+  if (handoff_note !== undefined) updates.handoff_note = handoff_note || null
+  if (blocked_reason !== undefined) updates.blocked_reason = blocked_reason || null
   if (assignee_user_id !== undefined) {
     updates.assignee_user_id = assignee_user_id
     updates.assignee_agent_id = null

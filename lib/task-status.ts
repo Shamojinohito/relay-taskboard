@@ -1,4 +1,4 @@
-export const TASK_STATUSES = ['backlog', 'todo', 'in_progress', 'on_hold', 'in_review', 'done'] as const
+export const TASK_STATUSES = ['backlog', 'todo', 'in_progress', 'on_hold', 'blocked', 'in_review', 'done'] as const
 
 export type TaskStatus = typeof TASK_STATUSES[number]
 
@@ -7,6 +7,7 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   todo: 'Todo',
   in_progress: 'In Progress',
   on_hold: 'On Hold',
+  blocked: 'Blocked',
   in_review: 'In Review',
   done: 'Done',
 }
@@ -16,6 +17,7 @@ export const TASK_STATUS_DOT_COLORS: Record<TaskStatus, string> = {
   todo: 'bg-sky-400',
   in_progress: 'bg-amber-400',
   on_hold: 'bg-zinc-400',
+  blocked: 'bg-rose-500',
   in_review: 'bg-violet-400',
   done: 'bg-emerald-400',
 }

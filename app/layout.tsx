@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AirFlow',
-  description: 'AI-Human collaborative task management',
+  title: 'Relay',
+  description: 'AI-human task relay and agent handoff board',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

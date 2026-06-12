@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Bot, Code2, Network, ShieldCheck, Sparkles } from 'lucide-react'
+import { Bot, Code2, Network, ShieldCheck } from 'lucide-react'
+import RelayLogo from '@/components/brand/relay-logo'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -50,27 +51,25 @@ export default function LoginPage() {
       <div className="mx-auto grid min-h-screen w-full max-w-6xl items-center gap-10 px-6 py-10 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="space-y-8">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
-              <Sparkles size={18} />
-            </div>
+            <RelayLogo className="size-10" />
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight">AirFlow</h1>
-              <p className="text-sm text-muted-foreground">AI-Human collaborative task operations</p>
+              <h1 className="text-3xl font-semibold tracking-tight">Relay</h1>
+              <p className="text-sm text-muted-foreground">AI-human task relay operations</p>
             </div>
           </div>
 
           <div className="max-w-xl space-y-4">
             <p className="text-4xl font-semibold leading-tight tracking-tight text-foreground">
-              Async command board for humans and AI agents.
+              Async handoff board for humans and AI agents.
             </p>
             <p className="text-base leading-7 text-muted-foreground">
-              Projects, tasks, approvals, links, and agent handoffs stay explicit so every worker knows the next move.
+              Relay keeps projects, tasks, approvals, links, and agent handoffs explicit so every worker knows the next move.
             </p>
           </div>
 
           <div className="grid max-w-xl gap-3 sm:grid-cols-3">
             {[
-              { icon: Bot, label: 'Agent routing' },
+              { icon: Bot, label: 'Agent relay' },
               { icon: Network, label: 'Project context' },
               { icon: ShieldCheck, label: 'Human approval' },
             ].map(({ icon: Icon, label }) => (

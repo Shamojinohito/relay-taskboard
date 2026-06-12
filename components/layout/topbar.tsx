@@ -38,7 +38,7 @@ export default function TopBar() {
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Radio size={13} className="text-emerald-400" />
-          <span>Live board</span>
+          <span>Relay online</span>
         </div>
         <div className="hidden items-center gap-1.5 sm:flex">
           <Clock3 size={13} />
