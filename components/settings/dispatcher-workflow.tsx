@@ -6,12 +6,13 @@ import CopyableCode from '@/components/settings/copyable-code'
 export default function DispatcherWorkflow() {
   const manualRun = `export RELAY_RUN_TOKEN="<same value as RELAY_RUN_TOKEN or AGENT_API_SECRET>"
 
-curl -X POST "$RELAY_BASE_URL/api/agent/run" \\
+curl -X POST "$RELAY_BASE_URL/api/v1/agent/run" \\
   -H "X-Relay-Run-Token: $RELAY_RUN_TOKEN"`
 
-  const agentPatch = `curl -X PATCH "$RELAY_BASE_URL/api/agent/tasks/<task-id>" \\
+  const agentPatch = `curl -X PATCH "$RELAY_BASE_URL/api/v1/agent/tasks/<task-id>" \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: $(uuidgen)" \\
   -d '{
     "status": "blocked",
     "blocked_reason": "Need human approval before changing production settings.",

@@ -10,20 +10,26 @@ export default function ClaudeCodeSetup() {
   const envExample = `export RELAY_BASE_URL="${LOCAL_BASE_URL}"
 export RELAY_AGENT_API_KEY="sk-agent-..."`
 
-  const authExample = `curl -X POST "$RELAY_BASE_URL/api/agent/auth" \\
+  const authExample = `curl -X POST "$RELAY_BASE_URL/api/v1/agent/auth" \\
   -H "Content-Type: application/json" \\
   -d '{"api_key":"'"$RELAY_AGENT_API_KEY"'"}'`
 
   const tasksExample = `TOKEN="<paste-token-from-auth-response>"
 
-curl "$RELAY_BASE_URL/api/agent/tasks?status=backlog" \\
+curl "$RELAY_BASE_URL/api/v1/agent/tasks?status=backlog" \\
   -H "Authorization: Bearer $TOKEN"`
 
-  const updateExample = `curl -X PATCH "$RELAY_BASE_URL/api/agent/tasks/<task-id>" \\
+  const claimExample = `curl -X POST "$RELAY_BASE_URL/api/v1/agent/claim-next-task" \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Idempotency-Key: $(uuidgen)"`
+
+  const updateExample = `curl -X PATCH "$RELAY_BASE_URL/api/v1/agent/tasks/<task-id>" \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: $(uuidgen)" \\
   -d '{
     "status": "in_progress",
+    "handoff_note": "Started implementation. Next owner should review the result.",
     "comment": "Claude Code picked this up and started work."
   }'`
 
@@ -33,8 +39,8 @@ Base URL: ${LOCAL_BASE_URL}
 Agent API key: use RELAY_AGENT_API_KEY from the local shell environment.
 
 Workflow:
-1. Authenticate with POST /api/agent/auth.
-2. Read assigned work with GET /api/agent/tasks.
+1. Authenticate with POST /api/v1/agent/auth.
+2. Claim one assigned task with POST /api/v1/agent/claim-next-task.
 3. Use status filters such as backlog, todo, in_progress, on_hold, blocked, in_review, done.
 4. Process one assigned task at a time. Treat urgent, high, medium, then low as priority order.
 5. When you start work, PATCH the task to in_progress and add a comment.
@@ -82,6 +88,7 @@ Workflow:
         </div>
         <CopyableCode>{authExample}</CopyableCode>
         <CopyableCode>{tasksExample}</CopyableCode>
+        <CopyableCode>{claimExample}</CopyableCode>
       </section>
 
       <section className="grid gap-3 rounded-lg border border-border bg-card/60 p-4">

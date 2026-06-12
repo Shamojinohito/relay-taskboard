@@ -11,10 +11,11 @@ export async function POST(request: Request) {
   if (!agent) return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
 
   const secret = new TextEncoder().encode(process.env.AGENT_API_SECRET!)
-  const token = await new SignJWT({ agentId: agent.id, agentName: agent.name })
+  const scopes = agent.scopes?.length ? agent.scopes : ['read:tasks']
+  const token = await new SignJWT({ agentId: agent.id, agentName: agent.name, scopes })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('24h')
     .sign(secret)
 
-  return NextResponse.json({ token, agent: { id: agent.id, name: agent.name, type: agent.type } })
+  return NextResponse.json({ token, agent: { id: agent.id, name: agent.name, type: agent.type, scopes } })
 }

@@ -1,28 +1,12 @@
 // app/api/agent/tasks/[id]/route.ts
 import { NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 import { createServiceClient } from '@/lib/supabase/service'
-
-async function getAgentFromRequest(request: Request) {
-  const auth = request.headers.get('Authorization')
-  if (!auth?.startsWith('Bearer ')) return null
-  const token = auth.slice(7)
-  try {
-    const secret = new TextEncoder().encode(process.env.AGENT_API_SECRET!)
-    const { payload } = await jwtVerify(token, secret)
-    return payload as { agentId: string; agentName: string }
-  } catch {
-    return null
-  }
-}
+import { getAgentFromRequest, writeAgentAuditLog } from '@/lib/agents/api'
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const agent = await getAgentFromRequest(request)
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { id } = await params
   const body = await request.json().catch(() => ({}))
   const {
@@ -35,6 +19,9 @@ export async function PATCH(
     assignee_user_id,
     status,
   } = body
+  const requiredScopes = comment ? ['write:tasks', 'write:comments'] as const : ['write:tasks'] as const
+  const agent = await getAgentFromRequest(request, [...requiredScopes])
+  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const supabase = createServiceClient()
 
@@ -63,6 +50,15 @@ export async function PATCH(
       task_id: id, body: comment, author_agent_id: agent.agentId
     })
   }
+
+  await writeAgentAuditLog({
+    action: 'tasks.patch',
+    agentId: agent.agentId,
+    idempotencyKey: request.headers.get('Idempotency-Key'),
+    metadata: { fields: Object.keys(updates), comment: Boolean(comment) },
+    requestId: request.headers.get('X-Request-Id'),
+    taskId: id,
+  })
 
   return NextResponse.json({ success: true })
 }

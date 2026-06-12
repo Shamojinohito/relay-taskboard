@@ -15,5 +15,5 @@ export async function validateAgentApiKey(apiKey: string) {
     .single()
 
   if (error || !agent) return null
-  return agent as { id: string; name: string; type: string; project_ids: string[] }
+  return agent as { id: string; name: string; type: string; project_ids: string[]; scopes: string[] }
 }
