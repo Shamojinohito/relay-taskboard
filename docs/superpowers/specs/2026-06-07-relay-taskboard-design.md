@@ -1,4 +1,4 @@
-# AirFlow TaskBoard — Design Spec
+# Relay — Design Spec
 Date: 2026-06-07
 
 ## Overview
@@ -128,7 +128,7 @@ agent_runs
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [Logo] AirFlow          [通知] [ユーザーアバター]        │  ← トップバー
+│  [Logo] Relay          [通知] [ユーザーアバター]        │  ← トップバー
 ├──────────┬──────────────────────────────────────────────┤
 │          │                                              │
 │ My Tasks │   [プロジェクト名]          [+ タスク追加]    │
@@ -219,7 +219,7 @@ PATCH /api/agent/tasks/:id
 ## Directory Structure
 
 ```
-airflow-taskboard/
+relay-taskboard/
 ├── app/
 │   ├── (auth)/
 │   │   └── login/

@@ -1,4 +1,4 @@
-# AirFlow TaskBoard Implementation Plan
+# Relay Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -13,7 +13,7 @@
 ## File Structure
 
 ```
-airflow-taskboard/
+relay-taskboard/
 ├── app/
 │   ├── (auth)/
 │   │   └── login/page.tsx
@@ -87,14 +87,14 @@ airflow-taskboard/
 
 ```bash
 cd /Users/kohei_suzuki/Project
-npx create-next-app@latest airflow-taskboard \
+npx create-next-app@latest relay-taskboard \
   --typescript \
   --tailwind \
   --eslint \
   --app \
   --src-dir=false \
   --import-alias="@/*"
-cd airflow-taskboard
+cd relay-taskboard
 ```
 
 - [ ] **Step 2: 依存パッケージをインストール**
@@ -193,7 +193,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AirFlow',
+  title: 'Relay',
   description: 'AI-Human collaborative task management',
 }
 
@@ -235,7 +235,7 @@ git commit -m "feat: initialize Next.js project with shadcn/ui dark theme"
 
 1. https://supabase.com にアクセスしてログイン
 2. 「New project」でプロジェクト作成
-3. Project name: `airflow-taskboard`
+3. Project name: `relay-taskboard`
 4. Database Password: 強力なパスワードを設定・保存
 5. Region: Northeast Asia (Tokyo)
 
@@ -682,7 +682,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 p-8 rounded-xl border border-border bg-card">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">AirFlow</h1>
+          <h1 className="text-2xl font-bold text-foreground">Relay</h1>
           <p className="text-sm text-muted-foreground mt-1">AI-Human collaborative tasks</p>
         </div>
 
@@ -793,7 +793,7 @@ export default function Sidebar() {
   return (
     <aside className="w-56 flex-shrink-0 border-r border-border bg-card flex flex-col h-screen">
       <div className="p-4 border-b border-border">
-        <span className="text-lg font-bold text-primary">AirFlow</span>
+        <span className="text-lg font-bold text-primary">Relay</span>
       </div>
 
       <ScrollArea className="flex-1">
@@ -2889,7 +2889,7 @@ npm run type-check 2>/dev/null || npx tsc --noEmit
 
 ```bash
 git add -A
-git commit -m "feat: complete AirFlow TaskBoard initial implementation"
+git commit -m "feat: complete Relay initial implementation"
 ```
 
 ---

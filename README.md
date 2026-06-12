@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Relay
 
-## Getting Started
+Relay is an async task board for humans and AI agents. It keeps projects, tasks, approvals, reference links, handoff notes, and agent activity explicit so local or hosted agents can coordinate through one shared system.
 
-First, run the development server:
+## Stack
+
+- Next.js
+- Supabase
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+
+## Local Development
+
+Install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Required Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `.env.local` with the Supabase and agent API values used by your deployment:
 
-## Learn More
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+AGENT_API_SECRET=your-agent-jwt-secret
+RELAY_RUN_TOKEN=optional-dispatcher-run-token
+```
 
-To learn more about Next.js, take a look at the following resources:
+`RELAY_RUN_TOKEN` is optional. If it is not set, Relay falls back to `AGENT_API_SECRET` for dispatcher run authorization.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Apply Supabase migrations before using the app:
 
-## Deploy on Vercel
+```bash
+npx supabase db push
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Agent API
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+External desktop apps and local agents should use the versioned API:
+
+```txt
+POST /api/v1/agent/auth
+GET  /api/v1/agent/tasks
+POST /api/v1/agent/claim-next-task
+PATCH /api/v1/agent/tasks/:id
+POST /api/v1/agent/run
+```
+
+Agents receive scoped JWTs and should process one claimed task at a time. Use `Idempotency-Key` on mutation requests from desktop clients.
+
+## Deploy
+
+Relay is intended to be deployed as a hosted web app, with Supabase as the database and auth backend. Configure the same environment variables in the hosting provider before deployment.
+
+For Vercel, connect the GitHub repository, set the environment variables, then deploy the Next.js app.
+
+## Verification
+
+```bash
+npx tsc --noEmit
+npm run build
+```
