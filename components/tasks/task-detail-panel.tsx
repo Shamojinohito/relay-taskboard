@@ -4,7 +4,13 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, LinkIcon, MessageSquareText, Network, X } from 'lucide-react'
+import { CalendarDays, LinkIcon, MessageSquareText, MoreHorizontal, Network, Trash2, X } from 'lucide-react'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -63,6 +69,26 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
     queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
   }
 
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const deleteTask = async () => {
+    setDeleting(true)
+    setDeleteError(null)
+    const { error } = await (supabase.from('tasks') as any).delete().eq('id', taskId)
+    if (error) {
+      setDeleteError(error.message)
+      setDeleting(false)
+      return
+    }
+    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    setDeleting(false)
+    setDeleteOpen(false)
+    onClose()
+  }
+
   if (!task) return null
 
   return (
@@ -72,9 +98,22 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
           <Badge variant="outline" className="capitalize">{getTaskStatusLabel(task.status)}</Badge>
           <Badge variant="secondary" className="capitalize">{task.priority}</Badge>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onClose}>
-          <X size={16} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+              <MoreHorizontal size={16} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                <Trash2 size={14} />
+                Delete task
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onClose}>
+            <X size={16} />
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
@@ -82,7 +121,14 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
           <Input
             value={task.title}
             onChange={e => setTask(prev => prev ? { ...prev, title: e.target.value } : prev)}
-            onBlur={e => updateTask({ title: e.target.value })}
+            onBlur={e => {
+              const trimmed = e.target.value.trim()
+              if (!trimmed) {
+                setTask(prev => prev ? { ...prev, title: task.title } : prev)
+                return
+              }
+              if (trimmed !== task.title) updateTask({ title: trimmed })
+            }}
             className="h-auto border-transparent bg-transparent px-0 text-lg font-semibold leading-tight focus-visible:ring-0"
           />
 
@@ -227,6 +273,28 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
           </div>
         </div>
       </ScrollArea>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete task?</DialogTitle>
+            <DialogDescription>
+              This will also delete its subtasks, comments, and links. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <p className="text-sm text-destructive">{deleteError}</p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteTask} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
