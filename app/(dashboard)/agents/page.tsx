@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { AgentList } from '@/components/agents/agent-list'
 import { AgentRunLog } from '@/components/agents/agent-run-log'
@@ -14,15 +14,20 @@ interface Agent {
 }
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[]>([])
   const supabase = createClient()
 
-  useEffect(() => {
-    ;(supabase.from('agents') as any)
-      .select('*')
-      .order('created_at')
-      .then(({ data }: { data: Agent[] | null }) => setAgents(data ?? []))
-  }, [])
+  const { data: agents = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['agents'],
+    queryFn: async (): Promise<Agent[]> => {
+      const { data, error } = await (supabase.from('agents') as any)
+        .select('*')
+        .order('created_at')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  })
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-6">
@@ -41,7 +46,7 @@ export default function AgentsPage() {
           <TabsTrigger value="runs">Run Log</TabsTrigger>
         </TabsList>
         <TabsContent value="agents" className="mt-4">
-          <AgentList agents={agents} />
+          <AgentList agents={agents} isLoading={isLoading} error={error as Error | null} onRetry={refetch} />
         </TabsContent>
         <TabsContent value="runs" className="mt-4">
           <AgentRunLog />
