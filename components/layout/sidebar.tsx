@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Bot, CheckSquare, FolderKanban, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useProjects } from '@/hooks/use-projects'
 import CreateProjectDialog from '@/components/projects/create-project-dialog'
@@ -13,7 +14,7 @@ import RelayLogo from '@/components/brand/relay-logo'
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { projects, error } = useProjects()
+  const { projects, isLoading, error } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
   const navItemClassName = (active: boolean) => cn(
     "flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors",
@@ -53,21 +54,31 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {(projects as any[]).map(project => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className={cn(navItemClassName(pathname.startsWith(`/projects/${project.id}`)), "truncate")}
-            >
-              <FolderKanban size={15} className="flex-shrink-0" />
-              <span className="truncate">{project.name}</span>
-            </Link>
-          ))}
-
-          {error && (
+          {isLoading ? (
+            <div className="space-y-1 px-3">
+              {[0, 1, 2].map(i => (
+                <Skeleton key={i} className="h-8 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : error ? (
             <p className="px-3 py-2 text-xs text-destructive">
               Failed to load projects
             </p>
+          ) : (projects as any[]).length === 0 ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground">
+              No projects yet. Use the + above to create one.
+            </p>
+          ) : (
+            (projects as any[]).map(project => (
+              <Link
+                key={project.id}
+                href={`/projects/${project.id}`}
+                className={cn(navItemClassName(pathname.startsWith(`/projects/${project.id}`)), "truncate")}
+              >
+                <FolderKanban size={15} className="flex-shrink-0" />
+                <span className="truncate">{project.name}</span>
+              </Link>
+            ))
           )}
 
           <div className="px-3 pb-1 pt-5">
