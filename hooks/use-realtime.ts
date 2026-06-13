@@ -53,3 +53,44 @@ export function useTasksRealtime(projectId: string) {
     return () => { supabase.removeChannel(channel) }
   }, [projectId, queryClient])
 }
+
+export function useAgentRunsRealtime() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('agent-runs')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agent_runs',
+      }, (payload) => {
+        const queryKey = ['agent-runs']
+
+        if (payload.eventType === 'INSERT') {
+          queryClient.setQueryData(queryKey, (current: unknown) => {
+            if (!Array.isArray(current)) return current
+            if (current.some((run: any) => run.id === payload.new.id)) return current
+            return [payload.new, ...current].slice(0, 50)
+          })
+          return
+        }
+
+        if (payload.eventType === 'UPDATE') {
+          queryClient.setQueryData(queryKey, (current: unknown) => {
+            if (!Array.isArray(current)) return current
+            return current.map((run: any) =>
+              run.id === payload.new.id ? { ...run, ...payload.new } : run
+            )
+          })
+          return
+        }
+
+        queryClient.invalidateQueries({ queryKey, refetchType: 'inactive' })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [queryClient])
+}
