@@ -10,7 +10,7 @@ export function useTasks(projectId: string) {
   const supabase = createClient() as any
   const queryClient = useQueryClient()
 
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tasks', projectId],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queryFn: async (): Promise<any[]> => {
@@ -78,5 +78,5 @@ export function useTasks(projectId: string) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks', projectId] }),
   })
 
-  return { tasks, isLoading, error, updateStatus }
+  return { tasks, isLoading, error, updateStatus, refetch }
 }

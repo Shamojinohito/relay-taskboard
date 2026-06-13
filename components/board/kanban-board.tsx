@@ -11,6 +11,7 @@ import { TaskCard } from './task-card'
 import { useTasks, type TaskStatus } from '@/hooks/use-tasks'
 import { useTasksRealtime } from '@/hooks/use-realtime'
 import { TASK_STATUSES } from '@/lib/task-status'
+import { Button } from '@/components/ui/button'
 
 const STATUSES: TaskStatus[] = [...TASK_STATUSES]
 
@@ -22,7 +23,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardProps) {
   useTasksRealtime(projectId)
-  const { tasks, error, updateStatus } = useTasks(projectId)
+  const { tasks, isLoading, error, updateStatus, refetch } = useTasks(projectId)
   const [activeTask, setActiveTask] = useState<(typeof tasks)[0] | null>(null)
   const [projectedTasks, setProjectedTasks] = useState<typeof tasks | null>(null)
 
@@ -134,20 +135,31 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
       setProjectedTasks(null)
     }} onDragEnd={handleDragEnd}>
       <div className="flex h-full gap-5 overflow-x-auto bg-background px-6 py-5">
-        {error && (
-          <div className="w-80 flex-shrink-0 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-            Failed to load tasks: {(error as Error).message}
+        {error ? (
+          <div className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-8 text-sm text-destructive">
+            <p>Failed to load tasks: {(error as Error).message}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
           </div>
+        ) : isLoading ? (
+          STATUSES.map(status => (
+            <KanbanColumn key={status} status={status} tasks={[]} isLoading onTaskClick={onTaskClick} onAddTask={onAddTask} />
+          ))
+        ) : tasks.length === 0 ? (
+          <div className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
+            <p className="text-sm">No tasks yet.</p>
+            <Button size="sm" onClick={() => onAddTask('backlog')}>Create your first task</Button>
+          </div>
+        ) : (
+          STATUSES.map(status => (
+            <KanbanColumn
+              key={status}
+              status={status}
+              tasks={tasksByStatus[status]}
+              onTaskClick={onTaskClick}
+              onAddTask={onAddTask}
+            />
+          ))
         )}
-        {STATUSES.map(status => (
-          <KanbanColumn
-            key={status}
-            status={status}
-            tasks={tasksByStatus[status]}
-            onTaskClick={onTaskClick}
-            onAddTask={onAddTask}
-          />
-        ))}
       </div>
       <DragOverlay>
         {activeTask && (
