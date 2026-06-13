@@ -13,34 +13,15 @@ interface Agent {
   created_at: string
 }
 
-interface AgentRun {
-  id: string
-  trigger: string
-  status: string
-  summary: string | null
-  started_at: string
-  finished_at: string | null
-}
-
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([])
-  const [runs, setRuns] = useState<AgentRun[]>([])
   const supabase = createClient()
-
-  const loadRuns = async () => {
-    const { data } = await (supabase.from('agent_runs') as any)
-      .select('*')
-      .order('started_at', { ascending: false })
-      .limit(50)
-    setRuns(data ?? [])
-  }
 
   useEffect(() => {
     ;(supabase.from('agents') as any)
       .select('*')
       .order('created_at')
       .then(({ data }: { data: Agent[] | null }) => setAgents(data ?? []))
-    loadRuns()
   }, [])
 
   return (
@@ -63,7 +44,7 @@ export default function AgentsPage() {
           <AgentList agents={agents} />
         </TabsContent>
         <TabsContent value="runs" className="mt-4">
-          <AgentRunLog runs={runs} />
+          <AgentRunLog />
         </TabsContent>
       </Tabs>
     </div>
