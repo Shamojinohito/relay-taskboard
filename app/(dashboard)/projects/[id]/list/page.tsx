@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Bot, AlertCircle, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { Bot, AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, GitBranch, ListChecks } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { sortTasks, type SortDirection, type TaskSortKey } from '@/lib/task-sort'
@@ -29,7 +29,7 @@ export default function ProjectListPage() {
   const { id } = useParams<{ id: string }>()
   const { projects } = useProjects()
   const project = projects.find((p: any) => p.id === id)
-  const { tasks, isLoading, error, refetch } = useTasks(id)
+  const { tasks, isLoading, error, refetch } = useTasks(id, { includeSubtasks: true })
   useTasksRealtime(id)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -40,6 +40,32 @@ export default function ProjectListPage() {
     () => sortTasks(tasks as any[], sortKey, sortDirection),
     [tasks, sortKey, sortDirection]
   )
+
+  const displayTasks = useMemo(() => {
+    if (sortKey !== 'position') return sortedTasks
+
+    const childTasksByParent = new Map<string, any[]>()
+    const parentTasks: any[] = []
+    const orphanSubtasks: any[] = []
+
+    for (const task of sortedTasks as any[]) {
+      if (!task.parent_task_id) {
+        parentTasks.push(task)
+        continue
+      }
+
+      const siblings = childTasksByParent.get(task.parent_task_id) ?? []
+      siblings.push(task)
+      childTasksByParent.set(task.parent_task_id, siblings)
+    }
+
+    const parentIds = new Set(parentTasks.map(task => task.id))
+    for (const task of sortedTasks as any[]) {
+      if (task.parent_task_id && !parentIds.has(task.parent_task_id)) orphanSubtasks.push(task)
+    }
+
+    return parentTasks.flatMap(task => [task, ...(childTasksByParent.get(task.id) ?? [])]).concat(orphanSubtasks)
+  }, [sortKey, sortedTasks])
 
   const toggleSort = (key: TaskSortKey) => {
     if (sortKey === key) {
@@ -105,18 +131,37 @@ export default function ProjectListPage() {
                     </td>
                   </tr>
                 ))
-              ) : sortedTasks.length === 0 ? (
+              ) : displayTasks.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-sm text-muted-foreground">
                     No tasks yet.
                   </td>
                 </tr>
-              ) : sortedTasks.map((task: any) => (
+              ) : displayTasks.map((task: any) => (
                 <tr key={task.id}
-                  className="border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
+                  className={cn(
+                    'border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors',
+                    task.parent_task_id && 'bg-secondary/10'
+                  )}
                   onClick={() => setSelectedTaskId(task.id)}>
                   <td className="px-6 py-3">
-                    <span className="text-sm text-foreground">{task.title}</span>
+                    <div className={cn('flex min-w-0 items-center gap-2', task.parent_task_id && 'pl-5')}>
+                      {task.parent_task_id && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          <GitBranch size={11} />
+                          Subtask
+                        </span>
+                      )}
+                      <span className={cn('truncate text-sm text-foreground', task.parent_task_id && 'text-muted-foreground')}>
+                        {task.title}
+                      </span>
+                      {!task.parent_task_id && task.subtask_count > 0 && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                          <ListChecks size={11} />
+                          {task.completed_subtask_count}/{task.subtask_count}
+                        </span>
+                      )}
+                    </div>
                     {task.task_tags?.map(({ tags }: any) => tags && (
                       <Badge key={tags.id} variant="outline" className="ml-2 text-xs py-0 px-1.5"
                         style={{ borderColor: tags.color, color: tags.color }}>
@@ -154,7 +199,7 @@ export default function ProjectListPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {task.due_date ? format(new Date(task.due_date), 'MM/dd') : '—'}
+                    {task.due_date ? format(new Date(task.due_date), 'yyyy.MM.dd') : '—'}
                   </td>
                 </tr>
               ))}

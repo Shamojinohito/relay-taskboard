@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus } from 'lucide-react'
+import { GitBranch, ListChecks, Plus } from 'lucide-react'
 
 interface Subtask {
   id: string
@@ -25,6 +25,7 @@ export default function SubtaskList({ parentTaskId, projectId }: SubtaskListProp
   const [newTitle, setNewTitle] = useState('')
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const completedCount = subtasks.filter(subtask => subtask.status === 'done').length
 
   useEffect(() => {
     ;(supabase.from('tasks') as any)
@@ -54,12 +55,20 @@ export default function SubtaskList({ parentTaskId, projectId }: SubtaskListProp
     const newStatus = subtask.status === 'done' ? 'todo' : 'done'
     await (supabase.from('tasks') as any).update({ status: newStatus }).eq('id', subtask.id)
     setSubtasks(prev => prev.map(s => s.id === subtask.id ? { ...s, status: newStatus } : s))
+    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
   }
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <ListChecks size={13} />
+          {completedCount}/{subtasks.length} complete
+        </span>
+      </div>
       {subtasks.map(sub => (
-        <div key={sub.id} className="flex items-center gap-2">
+        <div key={sub.id} className="flex items-center gap-2 rounded-md border border-border/60 bg-background/45 px-2 py-1.5">
+          <GitBranch size={12} className="text-muted-foreground" />
           <Checkbox checked={sub.status === 'done'} onCheckedChange={() => toggleSubtask(sub)} />
           <span className={`text-sm ${sub.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
             {sub.title}

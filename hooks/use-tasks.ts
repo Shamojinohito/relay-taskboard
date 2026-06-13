@@ -5,16 +5,44 @@ import type { TaskStatus } from '@/lib/task-status'
 
 export type { TaskStatus }
 
-export function useTasks(projectId: string) {
+interface UseTasksOptions {
+  includeSubtasks?: boolean
+}
+
+function withSubtaskCounts(tasks: any[]) {
+  const counts = new Map<string, { total: number; done: number }>()
+
+  for (const task of tasks) {
+    if (!task.parent_task_id) continue
+    const current = counts.get(task.parent_task_id) ?? { total: 0, done: 0 }
+    current.total += 1
+    if (task.status === 'done') current.done += 1
+    counts.set(task.parent_task_id, current)
+  }
+
+  return tasks.map(task => {
+    const subtaskCount = counts.get(task.id) ?? { total: 0, done: 0 }
+    return {
+      ...task,
+      subtask_count: subtaskCount.total,
+      completed_subtask_count: subtaskCount.done,
+      is_subtask: Boolean(task.parent_task_id),
+    }
+  })
+}
+
+export function useTasks(projectId: string, options: UseTasksOptions = {}) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient() as any
   const queryClient = useQueryClient()
+  const includeSubtasks = options.includeSubtasks ?? false
+  const queryKey = includeSubtasks ? ['tasks', projectId, 'with-subtasks'] : ['tasks', projectId]
 
   const { data: tasks = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['tasks', projectId],
+    queryKey,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queryFn: async (): Promise<any[]> => {
-      const { data, error } = await supabase
+      const query = supabase
         .from('tasks')
         .select(`
           id,
@@ -38,10 +66,15 @@ export function useTasks(projectId: string) {
           assignee_agent:assignee_agent_id(id, name, type)
         `)
         .eq('project_id', projectId)
-        .is('parent_task_id', null)
         .order('position', { ascending: true })
+
+      const { data, error } = await query
       if (error) throw error
-      return data ?? []
+
+      const enrichedTasks = withSubtaskCounts(data ?? [])
+      return includeSubtasks
+        ? enrichedTasks
+        : enrichedTasks.filter(task => !task.parent_task_id)
     },
     enabled: !!projectId,
     staleTime: 30_000,
@@ -57,7 +90,6 @@ export function useTasks(projectId: string) {
       if (error) throw error
     },
     onMutate: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
-      const queryKey = ['tasks', projectId]
       await queryClient.cancelQueries({ queryKey })
       const previousTasks = queryClient.getQueryData(queryKey)
 
@@ -72,7 +104,7 @@ export function useTasks(projectId: string) {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks', projectId], context.previousTasks)
+        queryClient.setQueryData(queryKey, context.previousTasks)
       }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks', projectId] }),

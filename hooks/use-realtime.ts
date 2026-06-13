@@ -16,33 +16,52 @@ export function useTasksRealtime(projectId: string) {
         filter: `project_id=eq.${projectId}`,
       }, (payload) => {
         const queryKey = ['tasks', projectId]
+        const tasksWithSubtasksKey = ['tasks', projectId, 'with-subtasks']
 
         if (payload.eventType === 'INSERT') {
+          if (payload.new.parent_task_id) {
+            queryClient.invalidateQueries({ queryKey })
+            return
+          }
+
           queryClient.setQueryData(queryKey, (current: unknown) => {
             if (!Array.isArray(current)) return current
-            if (payload.new.parent_task_id || current.some((task: any) => task.id === payload.new.id)) {
+            if (current.some((task: any) => task.id === payload.new.id)) {
               return current
             }
             return [...current, { ...payload.new, task_tags: [], task_links: [], assignee_agent: null }]
           })
+          queryClient.invalidateQueries({ queryKey: tasksWithSubtasksKey })
           return
         }
 
         if (payload.eventType === 'UPDATE') {
+          if (payload.new.parent_task_id) {
+            queryClient.invalidateQueries({ queryKey })
+            return
+          }
+
           queryClient.setQueryData(queryKey, (current: unknown) => {
             if (!Array.isArray(current)) return current
             return current.map((task: any) =>
               task.id === payload.new.id ? { ...task, ...payload.new } : task
             )
           })
+          queryClient.invalidateQueries({ queryKey: tasksWithSubtasksKey })
           return
         }
 
         if (payload.eventType === 'DELETE') {
+          if (payload.old.parent_task_id) {
+            queryClient.invalidateQueries({ queryKey })
+            return
+          }
+
           queryClient.setQueryData(queryKey, (current: unknown) => {
             if (!Array.isArray(current)) return current
             return current.filter((task: any) => task.id !== payload.old.id)
           })
+          queryClient.invalidateQueries({ queryKey: tasksWithSubtasksKey })
           return
         }
 

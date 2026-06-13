@@ -5,7 +5,7 @@ import type React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Badge } from '@/components/ui/badge'
-import { Bot, CalendarDays, LinkIcon, UserRound } from 'lucide-react'
+import { Bot, CalendarDays, GitBranch, LinkIcon, ListChecks, UserRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { getTaskReadiness, TASK_READINESS_STYLES } from '@/lib/task-readiness'
@@ -31,6 +31,7 @@ const ASSIGNEE_COLORS = [
 interface TaskCardProps {
   task: {
     id: string
+    parent_task_id?: string | null
     title: string
     status: string
     priority: string
@@ -42,6 +43,9 @@ interface TaskCardProps {
     task_tags: { tags: { id: string; name: string; color: string } | null }[]
     task_links?: { id: string; url: string; title: string | null }[]
     assignee_agent: { name: string; type: string } | null
+    subtask_count?: number
+    completed_subtask_count?: number
+    is_subtask?: boolean
   }
   onClick: () => void
 }
@@ -69,6 +73,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   const assigneeColor = getStableColor(assigneeId)
   const firstLink = task.task_links?.[0]
   const readiness = getTaskReadiness(task)
+  const subtaskCount = task.subtask_count ?? 0
+  const completedSubtaskCount = task.completed_subtask_count ?? 0
+  const isSubtask = task.is_subtask ?? Boolean(task.parent_task_id)
 
   const openFirstLink = (event: React.MouseEvent | React.PointerEvent) => {
     event.preventDefault()
@@ -86,13 +93,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       {...listeners}
       onClick={onClick}
       className={cn(
-        'group bg-card/95 border border-l-4 border-border rounded-lg p-3 cursor-pointer shadow-sm shadow-black/15 transition-all space-y-2 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-card hover:shadow-md hover:shadow-black/25',
+        'group bg-card/95 border border-l-4 border-border rounded-lg p-2.5 cursor-pointer shadow-sm shadow-black/15 transition-all space-y-1.5 hover:-translate-y-0.5 hover:border-primary/45 hover:bg-card hover:shadow-md hover:shadow-black/25',
         PRIORITY_COLORS[task.priority as keyof typeof PRIORITY_COLORS] ?? 'border-l-muted'
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium leading-snug text-foreground">{task.title}</p>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <p className="min-w-0 flex-1 text-[13px] font-medium leading-snug text-foreground">{task.title}</p>
+        <div className="flex shrink-0 items-center gap-1">
           <span
             className={cn('inline-flex size-2 rounded-full ring-2 ring-background', TASK_READINESS_STYLES[readiness.level])}
             title={readiness.title}
@@ -100,6 +107,24 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             data-readiness={readiness.level}
           />
           <span className="sr-only">{readiness.label}</span>
+          {isSubtask && (
+            <span
+              className="inline-flex size-5 items-center justify-center rounded-md border border-border bg-background/60 text-muted-foreground"
+              title="Subtask"
+              aria-label="Subtask"
+            >
+              <GitBranch size={11} />
+            </span>
+          )}
+          {subtaskCount > 0 && (
+            <span
+              className="inline-flex h-5 items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-1.5 text-[10px] font-medium text-primary"
+              title={`${completedSubtaskCount}/${subtaskCount} subtasks complete`}
+            >
+              <ListChecks size={11} />
+              {completedSubtaskCount}/{subtaskCount}
+            </span>
+          )}
           <span className="rounded-md border border-border bg-background/65 px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
             {task.priority}
           </span>

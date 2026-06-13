@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowDown, ArrowUp, Bot, CalendarDays, CheckSquare, LinkIcon, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUp, Bot, CalendarDays, CheckSquare, GitBranch, LinkIcon, UserRound } from 'lucide-react'
 import { sortTasks, type SortDirection, type TaskSortKey } from '@/lib/task-sort'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -23,6 +23,7 @@ import { TASK_STATUSES, getTaskStatusDotColor, getTaskStatusLabel } from '@/lib/
 
 interface Task {
   id: string
+  parent_task_id: string | null
   title: string
   priority: string
   due_date: string | null
@@ -80,6 +81,7 @@ export default function MyTasksPage() {
       const { data, error } = await (supabase.from('tasks') as any)
         .select(`
           id,
+          parent_task_id,
           project_id,
           title,
           status,
@@ -211,6 +213,12 @@ export default function MyTasksPage() {
                       >
                         <div className="min-w-0">
                           <div className="flex min-w-0 items-center gap-2">
+                            {task.parent_task_id && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background/60 px-1 py-0.5 text-[9px] font-medium leading-3 text-muted-foreground">
+                                <GitBranch size={10} />
+                                Subtask
+                              </span>
+                            )}
                             <span className="truncate text-[13px] font-medium leading-5 text-foreground">{task.title}</span>
                             {task.task_links.length > 0 && (
                               <span
