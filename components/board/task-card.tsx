@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Bot, CalendarDays, LinkIcon, UserRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { getTaskReadiness, TASK_READINESS_STYLES } from '@/lib/task-readiness'
 
 const PRIORITY_COLORS = {
   low: 'border-l-sky-400 hover:border-l-sky-300',
@@ -33,7 +34,9 @@ interface TaskCardProps {
     title: string
     status: string
     priority: string
+    blocked_reason?: string | null
     due_date: string | null
+    handoff_note?: string | null
     assignee_user_id?: string | null
     assignee_agent_id?: string | null
     task_tags: { tags: { id: string; name: string; color: string } | null }[]
@@ -65,6 +68,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   const assigneeName = task.assignee_agent?.name ?? (task.assignee_user_id ? 'Me' : null)
   const assigneeColor = getStableColor(assigneeId)
   const firstLink = task.task_links?.[0]
+  const readiness = getTaskReadiness(task)
 
   const openFirstLink = (event: React.MouseEvent | React.PointerEvent) => {
     event.preventDefault()
@@ -88,9 +92,18 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-snug text-foreground">{task.title}</p>
-        <span className="rounded-md border border-border bg-background/65 px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
-          {task.priority}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span
+            className={cn('inline-flex size-2 rounded-full ring-2 ring-background', TASK_READINESS_STYLES[readiness.level])}
+            title={readiness.title}
+            aria-label={readiness.label}
+            data-readiness={readiness.level}
+          />
+          <span className="sr-only">{readiness.label}</span>
+          <span className="rounded-md border border-border bg-background/65 px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+            {task.priority}
+          </span>
+        </div>
       </div>
 
       {task.task_tags.length > 0 && (
