@@ -9,6 +9,8 @@ import TaskDetailPanel from '@/components/tasks/task-detail-panel'
 import TaskForm from '@/components/tasks/task-form'
 import ProjectViewHeader from '@/components/projects/project-view-header'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Bot, AlertCircle, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { format } from 'date-fns'
@@ -27,7 +29,7 @@ export default function ProjectListPage() {
   const { id } = useParams<{ id: string }>()
   const { projects } = useProjects()
   const project = projects.find((p: any) => p.id === id)
-  const { tasks } = useTasks(id)
+  const { tasks, isLoading, error, refetch } = useTasks(id)
   useTasksRealtime(id)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -86,7 +88,30 @@ export default function ProjectListPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedTasks.map((task: any) => (
+              {error ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-destructive">
+                    <p>Failed to load tasks: {(error as Error).message}</p>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
+                      Retry
+                    </Button>
+                  </td>
+                </tr>
+              ) : isLoading ? (
+                [0, 1, 2, 3, 4].map(i => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="px-6 py-3" colSpan={5}>
+                      <Skeleton className="h-5 w-full rounded" />
+                    </td>
+                  </tr>
+                ))
+              ) : sortedTasks.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-muted-foreground">
+                    No tasks yet.
+                  </td>
+                </tr>
+              ) : sortedTasks.map((task: any) => (
                 <tr key={task.id}
                   className="border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
                   onClick={() => setSelectedTaskId(task.id)}>

@@ -13,6 +13,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Bot, Plus, Key, Copy } from 'lucide-react'
 
 interface Agent {
@@ -29,7 +30,17 @@ const TYPE_COLORS: Record<string, string> = {
   custom: 'bg-orange-500/20 text-orange-300',
 }
 
-export function AgentList({ agents }: { agents: Agent[] }) {
+export function AgentList({
+  agents,
+  isLoading,
+  error,
+  onRetry,
+}: {
+  agents: Agent[]
+  isLoading?: boolean
+  error?: Error | null
+  onRetry?: () => void
+}) {
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<'planner' | 'tech_lead' | 'worker' | 'custom'>('worker')
@@ -65,27 +76,48 @@ export function AgentList({ agents }: { agents: Agent[] }) {
         </Button>
       </div>
 
-      <div className="space-y-2">
-        {agents.map(agent => (
-          <div key={agent.id} className="flex items-center gap-3 p-3 border border-border rounded-lg">
-            <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
-              <Bot size={16} className="text-primary" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{agent.name}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${TYPE_COLORS[agent.type]}`}>
-                  {agent.type}
-                </span>
+      {isLoading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map(i => (
+            <Skeleton key={i} className="h-[60px] w-full rounded-lg" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <p>Failed to load agents: {error.message}</p>
+          {onRetry && (
+            <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
+              Retry
+            </Button>
+          )}
+        </div>
+      ) : agents.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          No agents yet. Use &ldquo;New Agent&rdquo; above to register one.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {agents.map(agent => (
+            <div key={agent.id} className="flex items-center gap-3 p-3 border border-border rounded-lg">
+              <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
+                <Bot size={16} className="text-primary" />
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Created {new Date(agent.created_at).toLocaleDateString()}
-              </p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{agent.name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${TYPE_COLORS[agent.type] ?? TYPE_COLORS.custom}`}>
+                    {agent.type}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Created {new Date(agent.created_at).toLocaleDateString()}
+                </p>
+              </div>
+              <Key size={14} className="text-muted-foreground" />
             </div>
-            <Key size={14} className="text-muted-foreground" />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={createOpen} onOpenChange={v => { setCreateOpen(v); if (!v) { setNewApiKey(null); setName('') } }}>
         <DialogContent>

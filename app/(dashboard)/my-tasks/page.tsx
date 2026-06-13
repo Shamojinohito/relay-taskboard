@@ -1,11 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -69,7 +71,7 @@ export default function MyTasksPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const supabase = createClient()
 
-  const { data: tasks = [], isLoading: loading } = useQuery({
+  const { data: tasks = [], isLoading: loading, error, refetch } = useQuery({
     queryKey: ['my-tasks'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -159,11 +161,25 @@ export default function MyTasksPage() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="text-muted-foreground text-sm">Loading...</div>
+          {error ? (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+              <p>Failed to load tasks: {(error as Error).message}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
+          ) : loading ? (
+            <div className="space-y-2">
+              {[0, 1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
           ) : tasks.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <p>No tasks assigned to you.</p>
+              <Link href="/" className="mt-2 inline-block text-sm text-primary hover:underline">
+                Browse projects
+              </Link>
             </div>
           ) : (
             <div className="space-y-3">

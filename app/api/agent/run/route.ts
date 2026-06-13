@@ -35,8 +35,8 @@ export async function POST(request: Request) {
   const runs = agents.map((agent: { id: string; name: string }) => ({
     agent_id: agent.id,
     trigger: 'manual',
-    status: 'completed',
-    summary: `Manual dispatcher check triggered. ${agent.name} should process one assigned task at a time and ignore tasks tagged dispatcher-lock.`,
+    status: 'triggered',
+    summary: `Dispatcher issued instructions to ${agent.name}.`,
   }))
 
   await (supabase.from('agent_runs') as any).insert(runs)
