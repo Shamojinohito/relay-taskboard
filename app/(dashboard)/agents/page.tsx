@@ -5,8 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { AgentList } from '@/components/agents/agent-list'
 import { AgentRunLog } from '@/components/agents/agent-run-log'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
-import { Play } from 'lucide-react'
 
 interface Agent {
   id: string
@@ -45,18 +43,15 @@ export default function AgentsPage() {
     loadRuns()
   }, [])
 
-  const triggerManualRun = async () => {
-    await fetch('/api/agent/run', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-    await loadRuns()
-  }
-
   return (
     <div className="max-w-3xl mx-auto px-6 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold">Agents</h1>
-        <Button size="sm" onClick={triggerManualRun}>
-          <Play size={14} className="mr-1" /> Run Now
-        </Button>
+        <div>
+          <h1 className="text-xl font-semibold">Agents</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage API identities for local agents. Relay stores assignments; agents claim work from outside the web app.
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="agents">

@@ -63,6 +63,24 @@ Relay is intended to be deployed as a hosted web app, with Supabase as the datab
 
 For Vercel, connect the GitHub repository, set the environment variables, then deploy the Next.js app.
 
+Production URL:
+
+```txt
+https://relay-taskboard.vercel.app
+```
+
+## Agent Operation Model
+
+Relay does not push jobs from the web app to AI agents. Human users create and assign tasks in the hosted web app, then local desktop apps or local agent shells authenticate with the Agent API and claim assigned work.
+
+Typical local agent flow:
+
+```txt
+1. POST /api/v1/agent/auth
+2. POST /api/v1/agent/claim-next-task
+3. PATCH /api/v1/agent/tasks/:id
+```
+
 ## Verification
 
 ```bash

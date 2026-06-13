@@ -4,10 +4,10 @@ import { Bot, CheckCircle2, KeyRound, Workflow } from 'lucide-react'
 import CopyableCode from '@/components/settings/copyable-code'
 import { ChatGPTLogo } from '@/components/settings/brand-logos'
 
-const LOCAL_BASE_URL = 'http://localhost:3000'
+const WEB_APP_BASE_URL = 'https://relay-taskboard.vercel.app'
 
 export default function CodexSetup() {
-  const envExample = `export RELAY_BASE_URL="${LOCAL_BASE_URL}"
+  const envExample = `export RELAY_BASE_URL="${WEB_APP_BASE_URL}"
 export RELAY_AGENT_API_KEY="sk-agent-..."`
 
   const authExample = `curl -X POST "$RELAY_BASE_URL/api/v1/agent/auth" \\
@@ -35,7 +35,7 @@ curl "$RELAY_BASE_URL/api/v1/agent/tasks?status=backlog" \\
 
   const codexPrompt = `You can access Relay through the Agent API.
 
-Base URL: ${LOCAL_BASE_URL}
+Base URL: ${WEB_APP_BASE_URL}
 Agent API key: use RELAY_AGENT_API_KEY from the local shell environment.
 
 Workflow:
@@ -46,7 +46,8 @@ Workflow:
 5. When you start work, PATCH the task to in_progress and add a comment.
 6. Record handoffs in handoff_note, blockers in blocked_reason, and detailed activity in comments.
 7. Do not automatically execute tasks tagged dispatcher-lock.
-8. If a human decision is needed, assign the task to the human owner or move it to blocked with a clear blocked_reason.`
+8. Do not wait for Relay to push work to you. Relay is the shared board/API; local agents pull and claim assigned work.
+9. If a human decision is needed, assign the task to the human owner or move it to blocked with a clear blocked_reason.`
 
   return (
     <div className="space-y-5">
@@ -56,7 +57,7 @@ Workflow:
           <h2 className="text-base font-semibold">Codex Setup</h2>
         </div>
         <p className="text-sm leading-6 text-muted-foreground">
-          Codex connects to Relay as an agent. Create an Agent API key, expose it to the Codex shell, then let Codex poll and update assigned tasks through the Agent API.
+          Codex runs outside the web app and connects to the hosted Relay Agent API. Relay does not push jobs to Codex; Codex claims assigned tasks from its local shell or desktop app workflow.
         </p>
       </div>
 
@@ -73,9 +74,12 @@ Workflow:
       <section className="grid gap-3 rounded-lg border border-border bg-card/60 p-4">
         <div className="flex items-center gap-2">
           <KeyRound size={15} className="text-primary" />
-          <h3 className="text-sm font-medium">2. Set local shell variables</h3>
+          <h3 className="text-sm font-medium">2. Set local agent variables</h3>
         </div>
         <CopyableCode>{envExample}</CopyableCode>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Use the hosted URL for production agents. For local development only, replace it with http://localhost:3000.
+        </p>
       </section>
 
       <section className="grid gap-3 rounded-lg border border-border bg-card/60 p-4">
