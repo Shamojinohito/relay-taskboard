@@ -25,7 +25,6 @@ export function useTasksRealtime(projectId: string) {
             }
             return [...current, { ...payload.new, task_tags: [], task_links: [], assignee_agent: null }]
           })
-          queryClient.invalidateQueries({ queryKey })
           return
         }
 
@@ -36,7 +35,6 @@ export function useTasksRealtime(projectId: string) {
               task.id === payload.new.id ? { ...task, ...payload.new } : task
             )
           })
-          queryClient.invalidateQueries({ queryKey })
           return
         }
 
@@ -48,7 +46,7 @@ export function useTasksRealtime(projectId: string) {
           return
         }
 
-        queryClient.invalidateQueries({ queryKey })
+        queryClient.invalidateQueries({ queryKey, refetchType: 'inactive' })
       })
       .subscribe()
 

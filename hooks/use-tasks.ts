@@ -17,7 +17,22 @@ export function useTasks(projectId: string) {
       const { data, error } = await supabase
         .from('tasks')
         .select(`
-          *,
+          id,
+          project_id,
+          parent_task_id,
+          title,
+          description,
+          status,
+          priority,
+          action_type,
+          handoff_note,
+          blocked_reason,
+          assignee_user_id,
+          assignee_agent_id,
+          due_date,
+          position,
+          created_at,
+          updated_at,
           task_tags(tag_id, tags(id, name, color)),
           task_links(id, url, title),
           assignee_agent:assignee_agent_id(id, name, type)
@@ -29,6 +44,8 @@ export function useTasks(projectId: string) {
       return data ?? []
     },
     enabled: !!projectId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   })
 
   const updateStatus = useMutation({

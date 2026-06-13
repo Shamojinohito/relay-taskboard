@@ -15,6 +15,8 @@ export function useProjects() {
       if (error) throw error
       return data
     },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   })
 
   return { projects, isLoading, error }

@@ -77,7 +77,14 @@ export default function MyTasksPage() {
 
       const { data, error } = await (supabase.from('tasks') as any)
         .select(`
-          *,
+          id,
+          project_id,
+          title,
+          status,
+          priority,
+          due_date,
+          assignee_user_id,
+          assignee_agent_id,
           project:project_id(name),
           task_tags(tag_id, tags(id, name, color)),
           task_links(id, url, title),
@@ -90,6 +97,8 @@ export default function MyTasksPage() {
       if (error) throw error
       return (data ?? []) as Task[]
     },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   })
 
   const sortedTasks = useMemo(
