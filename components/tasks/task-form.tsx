@@ -85,6 +85,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
     }
 
     await queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
     setLoading(false)
     onClose()
   }

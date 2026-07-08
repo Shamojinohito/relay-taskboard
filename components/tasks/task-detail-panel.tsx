@@ -67,6 +67,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
     setTask(prev => prev ? { ...prev, ...updates } : prev)
     queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
     queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
   }
 
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -84,6 +85,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
     }
     queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
     queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
     setDeleting(false)
     setDeleteOpen(false)
     onClose()

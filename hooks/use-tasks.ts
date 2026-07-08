@@ -107,7 +107,10 @@ export function useTasks(projectId: string, options: UseTasksOptions = {}) {
         queryClient.setQueryData(queryKey, context.previousTasks)
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['tasks', projectId] }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
+    },
   })
 
   return { tasks, isLoading, error, updateStatus, refetch }
