@@ -61,7 +61,13 @@ export function AgentList({
     const hashedKey = Array.from(new Uint8Array(hash))
       .map(b => b.toString(16).padStart(2, '0')).join('')
 
-    await (supabase.from('agents') as any).insert({ name: name.trim(), type, api_key: hashedKey })
+    const { error } = await (supabase.from('agents') as any)
+      .insert({ name: name.trim(), type, api_key: hashedKey })
+    if (error) {
+      alert(`Agent creation failed: ${error.message}`)
+      setLoading(false)
+      return
+    }
     setNewApiKey(rawKey)
     queryClient.invalidateQueries({ queryKey: ['agents'] })
     setLoading(false)
