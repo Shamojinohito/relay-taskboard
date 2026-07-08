@@ -23,8 +23,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // /api/agent/* はエージェント専用のため認証スキップ
-  if (request.nextUrl.pathname.startsWith('/api/agent')) {
+  // /api/agent/* と /api/v1/agent/* はエージェント専用のため認証スキップ
+  if (request.nextUrl.pathname.startsWith('/api/agent') || request.nextUrl.pathname.startsWith('/api/v1/agent')) {
     return supabaseResponse
   }
 
