@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { getTaskStatusDotColor, getTaskStatusLabel } from '@/lib/task-status'
 import { getTaskReadiness, TASK_READINESS_STYLES } from '@/lib/task-readiness'
+import { useInboxRealtime } from '@/hooks/use-realtime'
 
 interface InboxTask {
   id: string
@@ -55,6 +56,7 @@ function getTriageReason(task: InboxTask) {
 export default function InboxPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const supabase = createClient()
+  useInboxRealtime()
 
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ['triage-inbox'],

@@ -73,6 +73,27 @@ export function useTasksRealtime(projectId: string) {
   }, [projectId, queryClient])
 }
 
+export function useInboxRealtime() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('triage-inbox')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+      }, () => {
+        // Inbox rows join project/tags/agent data the payload lacks, so refetch instead of patching
+        queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [queryClient])
+}
+
 export function useAgentRunsRealtime() {
   const queryClient = useQueryClient()
   const supabase = createClient()
