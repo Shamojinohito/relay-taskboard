@@ -94,7 +94,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
   if (!task) return null
 
   return (
-    <div className="flex h-full w-[27rem] flex-col border-l border-border bg-card">
+    <div className="fixed inset-y-0 right-0 z-40 flex h-full w-full max-w-[27rem] flex-col border-l border-border bg-card md:static md:z-auto md:w-[27rem]">
       <div className="flex items-center justify-between border-b border-border bg-background/55 p-4">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="capitalize">{getTaskStatusLabel(task.status)}</Badge>

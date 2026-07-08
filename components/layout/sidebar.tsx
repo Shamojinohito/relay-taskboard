@@ -12,7 +12,12 @@ import CreateProjectDialog from '@/components/projects/create-project-dialog'
 import { useState } from 'react'
 import RelayLogo from '@/components/brand/relay-logo'
 
-export default function Sidebar() {
+interface SidebarProps {
+  className?: string
+  onNavigate?: () => void
+}
+
+export default function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname()
   const { projects, isLoading, error } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
@@ -24,7 +29,7 @@ export default function Sidebar() {
   )
 
   return (
-    <aside className="flex h-screen w-64 flex-shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className={cn("flex h-full w-64 flex-shrink-0 flex-col border-r border-sidebar-border bg-sidebar", className)}>
       <div className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
           <RelayLogo className="size-9" />
@@ -37,12 +42,12 @@ export default function Sidebar() {
 
       <ScrollArea className="flex-1">
         <nav className="space-y-1 p-3">
-          <Link href="/inbox" className={navItemClassName(pathname === '/inbox')}>
+          <Link href="/inbox" className={navItemClassName(pathname === '/inbox')} onClick={onNavigate}>
             <Inbox size={16} />
             <span>Inbox</span>
           </Link>
 
-          <Link href="/my-tasks" className={navItemClassName(pathname === '/my-tasks')}>
+          <Link href="/my-tasks" className={navItemClassName(pathname === '/my-tasks')} onClick={onNavigate}>
             <CheckSquare size={16} />
             <span>My Tasks</span>
           </Link>
@@ -79,6 +84,7 @@ export default function Sidebar() {
                 key={project.id}
                 href={`/projects/${project.id}`}
                 className={cn(navItemClassName(pathname.startsWith(`/projects/${project.id}`)), "truncate")}
+                onClick={onNavigate}
               >
                 <FolderKanban size={15} className="flex-shrink-0" />
                 <span className="truncate">{project.name}</span>
@@ -92,12 +98,12 @@ export default function Sidebar() {
             </span>
           </div>
 
-          <Link href="/agents" className={navItemClassName(pathname === '/agents')}>
+          <Link href="/agents" className={navItemClassName(pathname === '/agents')} onClick={onNavigate}>
             <Bot size={15} />
             <span>Agents</span>
           </Link>
 
-          <Link href="/settings" className={navItemClassName(pathname === '/settings')}>
+          <Link href="/settings" className={navItemClassName(pathname === '/settings')} onClick={onNavigate}>
             <Settings size={15} />
             <span>Settings</span>
           </Link>
