@@ -1,1 +1,1 @@
-export { GET } from '@/app/api/agent/tasks/route'
+export { GET, POST } from '@/app/api/agent/tasks/route'

@@ -29,3 +29,42 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ tasks: data })
 }
+
+export async function POST(request: Request) {
+  const agent = await getAgentFromRequest(request, ['write:tasks'])
+  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await request.json().catch(() => null)
+  if (!body?.title || !body?.project_id) {
+    return NextResponse.json({ error: 'title and project_id required' }, { status: 400 })
+  }
+
+  const supabase = createServiceClient()
+  const { data, error } = await (supabase.from('tasks') as any)
+    .insert({
+      project_id: body.project_id,
+      title: body.title,
+      description: body.description ?? null,
+      status: body.status ?? 'todo',
+      priority: body.priority ?? 'medium',
+      action_type: body.action_type ?? 'other',
+      due_date: body.due_date ?? null,
+      handoff_note: body.handoff_note ?? null,
+      created_by_agent_id: agent.agentId,
+    })
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await writeAgentAuditLog({
+    action: 'tasks.create',
+    agentId: agent.agentId,
+    idempotencyKey: request.headers.get('Idempotency-Key'),
+    metadata: { title: body.title },
+    requestId: request.headers.get('X-Request-Id'),
+    taskId: data.id,
+  })
+
+  return NextResponse.json({ task: data }, { status: 201 })
+}
