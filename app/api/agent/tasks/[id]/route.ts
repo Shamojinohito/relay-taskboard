@@ -13,6 +13,7 @@ export async function PATCH(
     action_type,
     blocked_reason,
     comment,
+    due_date,
     handoff_note,
     priority,
     assignee_agent_id,
@@ -31,6 +32,12 @@ export async function PATCH(
   if (action_type) updates.action_type = action_type
   if (handoff_note !== undefined) updates.handoff_note = handoff_note || null
   if (blocked_reason !== undefined) updates.blocked_reason = blocked_reason || null
+  if (due_date !== undefined) {
+    if (due_date && !/^\d{4}-\d{2}-\d{2}$/.test(due_date)) {
+      return NextResponse.json({ error: 'due_date must be YYYY-MM-DD or null' }, { status: 400 })
+    }
+    updates.due_date = due_date || null
+  }
   if (assignee_user_id !== undefined) {
     updates.assignee_user_id = assignee_user_id
     updates.assignee_agent_id = null
