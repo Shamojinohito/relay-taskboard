@@ -1,16 +1,31 @@
 // app/(dashboard)/projects/[id]/page.tsx
 'use client'
 
-import { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { KanbanBoard } from '@/components/board/kanban-board'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
 import TaskForm from '@/components/tasks/task-form'
-import ProjectViewHeader from '@/components/projects/project-view-header'
+import ProjectViewHeader, { PROJECT_VIEW_STORAGE_KEY } from '@/components/projects/project-view-header'
 import { useProjects } from '@/hooks/use-projects'
 
 export default function ProjectBoardPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
+
+  // On small screens the list view is far more scannable than the board,
+  // so default to it unless the user has explicitly chosen the board view.
+  useEffect(() => {
+    let preferred: string | null = null
+    try {
+      preferred = localStorage.getItem(PROJECT_VIEW_STORAGE_KEY)
+    } catch {
+      // storage unavailable — fall through to the default
+    }
+    if (preferred !== 'board' && window.matchMedia('(max-width: 767px)').matches) {
+      router.replace(`/projects/${id}/list`)
+    }
+  }, [id, router])
   const { projects } = useProjects()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const project = (projects as any[]).find((p: any) => p.id === id) as { id: string; name: string } | undefined

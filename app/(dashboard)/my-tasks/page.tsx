@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
+import { TaskCompleteToggle, TaskStatusChip } from '@/components/tasks/quick-status'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,7 +20,7 @@ import { ArrowDown, ArrowUp, Bot, CalendarDays, CheckSquare, GitBranch, LinkIcon
 import { sortTasks, type SortDirection, type TaskSortKey } from '@/lib/task-sort'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import { TASK_STATUSES, getTaskStatusDotColor, getTaskStatusLabel } from '@/lib/task-status'
+import { TASK_STATUSES, getTaskStatusDotColor, getTaskStatusLabel, type TaskStatus } from '@/lib/task-status'
 
 interface Task {
   id: string
@@ -71,6 +72,7 @@ export default function MyTasksPage() {
   const [sortKey, setSortKey] = useState<TaskSortKey>('due_date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const supabase = createClient()
+  const queryClient = useQueryClient()
 
   const { data: tasks = [], isLoading: loading, error, refetch } = useQuery({
     queryKey: ['my-tasks'],
@@ -104,6 +106,41 @@ export default function MyTasksPage() {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   })
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('tasks') as any)
+        .update({ status })
+        .eq('id', taskId)
+      if (error) throw error
+    },
+    onMutate: async ({ taskId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['my-tasks'] })
+      const previousTasks = queryClient.getQueryData(['my-tasks'])
+      queryClient.setQueryData(['my-tasks'], (current: unknown) => {
+        if (!Array.isArray(current)) return current
+        return current.map((task: Task) =>
+          task.id === taskId ? { ...task, status } : task
+        )
+      })
+      return { previousTasks }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['my-tasks'], context.previousTasks)
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+      const task = (tasks as Task[]).find(t => t.id === variables.taskId)
+      if (task) queryClient.invalidateQueries({ queryKey: ['tasks', task.project_id] })
+    },
+  })
+
+  const changeStatus = (taskId: string, status: TaskStatus) => {
+    updateStatus.mutate({ taskId, status })
+  }
 
   const sortedTasks = useMemo(
     () => sortTasks(tasks as Task[], sortKey, sortDirection),
@@ -202,16 +239,29 @@ export default function MyTasksPage() {
                   </div>
                   <div className="overflow-hidden rounded-lg border border-border bg-card/60">
                     {groupTasks.map(task => (
-                      <button
+                      <div
                         key={task.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         className={cn(
-                          'grid w-full cursor-pointer grid-cols-1 gap-1.5 border-b border-border/50 border-l-4 px-2.5 py-1.5 text-left transition-colors last:border-b-0 hover:bg-secondary/35 md:grid-cols-[minmax(0,1fr)_104px_80px_112px] md:items-center',
+                          'grid w-full cursor-pointer grid-cols-1 gap-1.5 border-b border-border/50 border-l-4 px-2.5 py-2 text-left transition-colors last:border-b-0 hover:bg-secondary/35 md:grid-cols-[minmax(0,1fr)_104px_80px_112px] md:items-center md:py-1.5',
                           PRIORITY_STYLES[task.priority] ?? 'border-l-muted text-muted-foreground'
                         )}
                         onClick={() => setSelectedTaskId(task.id)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setSelectedTaskId(task.id)
+                          }
+                        }}
                       >
-                        <div className="min-w-0">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <TaskCompleteToggle
+                            status={task.status}
+                            onChange={status => changeStatus(task.id, status)}
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-2">
                             {task.parent_task_id && (
                               <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background/60 px-1 py-0.5 text-[9px] font-medium leading-3 text-muted-foreground">
@@ -235,7 +285,12 @@ export default function MyTasksPage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-1">
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            <TaskStatusChip
+                              status={task.status}
+                              onChange={status => changeStatus(task.id, status)}
+                              className="px-1.5 py-0.5 text-[10px]"
+                            />
                             <span className="rounded border border-border bg-background/55 px-1 py-0.5 text-[9px] leading-3 text-muted-foreground">
                               {task.project?.name ?? 'No project'}
                             </span>
@@ -251,6 +306,7 @@ export default function MyTasksPage() {
                             {task.task_tags.length > 2 && (
                               <span className="text-[9px] text-muted-foreground">+{task.task_tags.length - 2}</span>
                             )}
+                          </div>
                           </div>
                         </div>
 
@@ -271,7 +327,7 @@ export default function MyTasksPage() {
                           {task.assignee_agent ? <Bot size={11} /> : <UserRound size={11} />}
                           <span className="truncate">{task.assignee_agent?.name ?? 'Me'}</span>
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
