@@ -62,10 +62,30 @@ export default function AssigneeSelect({ value, onChange, className }: AssigneeS
     return () => { mounted = false }
   }, [supabase])
 
+  const renderValue = (current: AssigneeValue) => {
+    if (!current || current === 'none') return 'Unassigned'
+    if (current.startsWith('user:')) {
+      const userId = current.slice(5)
+      return (
+        <>
+          <UserRound size={14} />
+          {currentUser?.id === userId ? (currentUser.email ?? 'Me') : 'Member'}
+        </>
+      )
+    }
+    const agent = agents.find(a => a.id === current.slice(6))
+    return (
+      <>
+        <Bot size={14} />
+        {agent?.name ?? 'Agent'}
+      </>
+    )
+  }
+
   return (
     <Select value={value} onValueChange={next => next && onChange(next as AssigneeValue)}>
       <SelectTrigger className={className}>
-        <SelectValue />
+        <SelectValue>{renderValue}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="none">Unassigned</SelectItem>

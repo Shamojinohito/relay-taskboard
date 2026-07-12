@@ -12,8 +12,7 @@ import { TaskCompleteToggle, TaskStatusChip } from '@/components/tasks/quick-sta
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Bot, AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, GitBranch, ListChecks } from 'lucide-react'
+import { Bot, AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, GitBranch, ListChecks, UserRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { sortTasks, type SortDirection, type TaskSortKey } from '@/lib/task-sort'
@@ -103,13 +102,11 @@ export default function ProjectListPage() {
         <Bot size={12} />
         <span className="truncate">{task.assignee_agent.name}</span>
       </span>
-    ) : task.assignee_user ? (
-      <Avatar className="h-6 w-6">
-        <AvatarImage src={task.assignee_user.raw_user_meta_data?.avatar_url} />
-        <AvatarFallback className="text-xs">
-          {task.assignee_user.email.slice(0, 2).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+    ) : task.assignee_user_id ? (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <UserRound size={12} />
+        <span>Me</span>
+      </span>
     ) : (
       <span className="text-xs text-muted-foreground">—</span>
     )

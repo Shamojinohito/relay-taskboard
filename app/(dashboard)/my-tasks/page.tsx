@@ -40,6 +40,13 @@ interface Task {
 
 const STATUS_ORDER = TASK_STATUSES.filter(status => status !== 'done')
 
+const SORT_LABELS: Record<string, string> = {
+  due_date: 'Due date',
+  priority: 'Priority',
+  title: 'Title',
+  project: 'Project',
+}
+
 const PRIORITY_STYLES: Record<string, string> = {
   low: 'border-l-sky-400 text-sky-300',
   medium: 'border-l-amber-400 text-amber-300',
@@ -177,7 +184,7 @@ export default function MyTasksPage() {
                 <span className="text-xs text-muted-foreground">Sort by</span>
                 <Select value={sortKey} onValueChange={value => changeSortKey(value as TaskSortKey)}>
                   <SelectTrigger size="sm" className="w-32">
-                    <SelectValue />
+                    <SelectValue>{(v: string) => SORT_LABELS[v] ?? v}</SelectValue>
                   </SelectTrigger>
                   <SelectContent align="end">
                     <SelectItem value="due_date">Due date</SelectItem>

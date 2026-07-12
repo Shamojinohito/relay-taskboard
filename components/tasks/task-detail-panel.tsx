@@ -148,7 +148,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
               <span className="text-xs text-muted-foreground">Status</span>
               <Select value={task.status} onValueChange={v => v && updateTask({ status: v })}>
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                  <SelectValue>{(v: string) => getTaskStatusLabel(v)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TASK_STATUSES.map(s => (
@@ -161,7 +161,9 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }: TaskDeta
               <span className="text-xs text-muted-foreground">Action Type</span>
               <Select value={task.action_type ?? 'other'} onValueChange={v => v && updateTask({ action_type: v })}>
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                  <SelectValue>
+                    {(v: string) => TASK_ACTION_TYPE_LABELS[v as keyof typeof TASK_ACTION_TYPE_LABELS] ?? v}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TASK_ACTION_TYPES.map(type => (
