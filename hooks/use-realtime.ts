@@ -94,6 +94,27 @@ export function useInboxRealtime() {
   }, [queryClient])
 }
 
+export function useTodayRealtime() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('today-tasks')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tasks',
+      }, () => {
+        // Today rows join project/tags/agent data the payload lacks, so refetch instead of patching
+        queryClient.invalidateQueries({ queryKey: ['today-tasks'] })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [queryClient])
+}
+
 export function useAgentRunsRealtime() {
   const queryClient = useQueryClient()
   const supabase = createClient()

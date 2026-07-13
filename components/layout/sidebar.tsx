@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bot, CheckSquare, FolderKanban, Inbox, Plus, Settings } from 'lucide-react'
+import { Bot, CalendarCheck, CheckSquare, FolderKanban, Inbox, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -45,6 +45,11 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
           <Link href="/inbox" className={navItemClassName(pathname === '/inbox')} onClick={onNavigate}>
             <Inbox size={16} />
             <span>Inbox</span>
+          </Link>
+
+          <Link href="/today" className={navItemClassName(pathname === '/today')} onClick={onNavigate}>
+            <CalendarCheck size={16} />
+            <span>Today</span>
           </Link>
 
           <Link href="/my-tasks" className={navItemClassName(pathname === '/my-tasks')} onClick={onNavigate}>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { addMonths, format, getDay, isSameDay, isValid, parse, parseISO, startOfMonth, subMonths } from 'date-fns'
+import { addMonths, format, getDay, isSameDay, isToday, isValid, parse, parseISO, startOfMonth, subMonths } from 'date-fns'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -106,6 +106,9 @@ export default function DatePicker({ value, onChange, className }: DatePickerPro
                 onClick={() => date && selectDate(date)}
                 className={cn(
                   'h-7 rounded-md text-sm text-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-0',
+                  // 今日のセルは枠線で示す（選択日の塗りつぶしが優先）
+                  date && isToday(date) && !(selectedDate && isSameDay(date, selectedDate)) &&
+                    'ring-1 ring-primary/60 font-medium text-primary',
                   date && selectedDate && isSameDay(date, selectedDate) && 'bg-primary text-primary-foreground hover:bg-primary'
                 )}
               >
