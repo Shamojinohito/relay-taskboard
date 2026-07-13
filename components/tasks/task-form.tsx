@@ -1,9 +1,10 @@
 // components/tasks/task-form.tsx
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useProjects } from '@/hooks/use-projects'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog'
@@ -19,26 +20,63 @@ import AssigneeSelect, { fromAssigneeValue, type AssigneeValue } from './assigne
 import { TASK_ACTION_TYPES, TASK_ACTION_TYPE_LABELS, type TaskActionType } from '@/lib/task-workflow'
 
 interface TaskFormProps {
-  projectId: string
+  /** 指定するとプロジェクト固定。省略時はフォーム内でプロジェクトを選択する */
+  projectId?: string
   initialStatus: string
   parentTaskId?: string
+  /** projectId 省略時の初期選択プロジェクト */
+  defaultProjectId?: string
+  /** 期日の初期値（YYYY-MM-DD。Today ビューからの追加用） */
+  defaultDueDate?: string
+  /** 担当者の初期値を自分にする（My Tasks ビューからの追加用） */
+  assignToMe?: boolean
   onClose: () => void
 }
 
-export default function TaskForm({ projectId, initialStatus, parentTaskId, onClose }: TaskFormProps) {
+export default function TaskForm({
+  projectId,
+  initialStatus,
+  parentTaskId,
+  defaultProjectId,
+  defaultDueDate,
+  assignToMe,
+  onClose,
+}: TaskFormProps) {
+  const fixedProject = Boolean(projectId)
+  const { projects } = useProjects()
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId ?? defaultProjectId ?? '')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
   const [actionType, setActionType] = useState<TaskActionType>('other')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState(defaultDueDate ?? '')
   const [assignee, setAssignee] = useState<AssigneeValue>('none')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const queryClient = useQueryClient()
   const supabase = createClient()
 
+  // プロジェクト一覧は非同期で届くため、未選択なら先頭を初期値にする
+  useEffect(() => {
+    if (fixedProject || selectedProjectId) return
+    const first = (projects as any[])[0]
+    if (first) setSelectedProjectId(defaultProjectId ?? first.id)
+  }, [fixedProject, selectedProjectId, defaultProjectId, projects])
+
+  useEffect(() => {
+    if (!assignToMe) return
+    let mounted = true
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted && data.user) {
+        setAssignee(current => current === 'none' ? `user:${data.user!.id}` : current)
+      }
+    })
+    return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignToMe])
+
   const handleCreate = async () => {
-    if (!title.trim()) return
+    if (!title.trim() || !selectedProjectId) return
     setLoading(true)
     setErrorMessage('')
 
@@ -51,7 +89,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
 
     const { data: task, error } = await (supabase.from('tasks') as any)
       .insert({
-        project_id: projectId,
+        project_id: selectedProjectId,
         parent_task_id: parentTaskId ?? null,
         title: title.trim(),
         description: description.trim() || null,
@@ -77,15 +115,17 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
     }
 
     if (task && !parentTaskId) {
-      queryClient.setQueryData(['tasks', projectId], (current: unknown) => {
+      queryClient.setQueryData(['tasks', selectedProjectId], (current: unknown) => {
         if (!Array.isArray(current)) return [task]
         if (current.some((item: any) => item.id === task.id)) return current
         return [...current, task]
       })
     }
 
-    await queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    await queryClient.invalidateQueries({ queryKey: ['tasks', selectedProjectId] })
     queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
+    queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    queryClient.invalidateQueries({ queryKey: ['today-tasks'] })
     setLoading(false)
     onClose()
   }
@@ -97,6 +137,23 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
           <DialogTitle>{parentTaskId ? 'Add Subtask' : 'Add Task'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {!fixedProject && (
+            <div className="space-y-2">
+              <Label>Project</Label>
+              <Select value={selectedProjectId} onValueChange={v => v && setSelectedProjectId(v)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {(v: string) => (projects as any[]).find(p => p.id === v)?.name ?? 'Select project'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {(projects as any[]).map(project => (
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Title</Label>
             <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Task title" />
@@ -146,7 +203,7 @@ export default function TaskForm({ projectId, initialStatus, parentTaskId, onClo
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={loading || !title.trim()}>Create</Button>
+          <Button onClick={handleCreate} disabled={loading || !title.trim() || !selectedProjectId}>Create</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

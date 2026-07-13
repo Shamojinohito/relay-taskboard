@@ -5,9 +5,11 @@ import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
+import TaskForm from '@/components/tasks/task-form'
 import TaskListView from '@/components/tasks/task-list-view'
 import { Badge } from '@/components/ui/badge'
-import { CheckSquare } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { CheckSquare, Plus } from 'lucide-react'
 import type { TaskStatus } from '@/lib/task-status'
 
 interface Task {
@@ -28,6 +30,7 @@ interface Task {
 
 export default function MyTasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const supabase = createClient()
   const queryClient = useQueryClient()
 
@@ -112,7 +115,14 @@ export default function MyTasksPage() {
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">Assigned work collected across projects.</p>
           </div>
-          <Badge variant="outline" className="px-2 py-1">{openCount} open</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-2 py-1">{openCount} open</Badge>
+            <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Plus size={14} />
+              <span className="hidden sm:inline">Add Task</span>
+              <span className="sr-only sm:hidden">Add Task</span>
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-auto">
@@ -143,6 +153,14 @@ export default function MyTasksPage() {
           taskId={selectedTaskId}
           projectId={selectedTask.project_id}
           onClose={() => setSelectedTaskId(null)}
+        />
+      )}
+
+      {createOpen && (
+        <TaskForm
+          initialStatus="todo"
+          assignToMe
+          onClose={() => setCreateOpen(false)}
         />
       )}
     </div>

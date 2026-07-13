@@ -3,12 +3,15 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { isBefore, addDays, parseISO } from 'date-fns'
-import { AlertTriangle, Inbox } from 'lucide-react'
+import { AlertTriangle, Inbox, Plus } from 'lucide-react'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
+import TaskForm from '@/components/tasks/task-form'
 import TaskListView from '@/components/tasks/task-list-view'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useProjects } from '@/hooks/use-projects'
 import { useInboxRealtime } from '@/hooks/use-realtime'
 import type { TaskStatus } from '@/lib/task-status'
 
@@ -48,8 +51,11 @@ function getTriageReason(task: InboxTask) {
 
 export default function InboxPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { projects } = useProjects()
+  const inboxProject = (projects as any[]).find(project => project.name === 'Inbox')
   useInboxRealtime()
 
   const { data: tasks = [], isLoading, error, refetch } = useQuery({
@@ -151,7 +157,14 @@ export default function InboxPage() {
                 Triage tasks that need context, ownership, human review, or unblock decisions.
               </p>
             </div>
-            <Badge variant="outline" className="px-2.5 py-1">{triageTasks.length} signals</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="px-2.5 py-1">{triageTasks.length} signals</Badge>
+              <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setCreateOpen(true)}>
+                <Plus size={14} />
+                <span className="hidden sm:inline">Add Task</span>
+                <span className="sr-only sm:hidden">Add Task</span>
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-5">
@@ -200,6 +213,14 @@ export default function InboxPage() {
           taskId={selectedTaskId}
           projectId={selectedTask.project_id}
           onClose={() => setSelectedTaskId(null)}
+        />
+      )}
+
+      {createOpen && (
+        <TaskForm
+          initialStatus="todo"
+          defaultProjectId={inboxProject?.id}
+          onClose={() => setCreateOpen(false)}
         />
       )}
     </div>
