@@ -1,0 +1,3 @@
+; config.ini にコピーして api_key を設定する（config.ini は git 管理外）
+[relay]
+api_key=sk-agent-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx

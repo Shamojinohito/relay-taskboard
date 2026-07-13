@@ -42,3 +42,6 @@ supabase/.temp/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# quick capture client secrets
+clients/windows/config.ini
