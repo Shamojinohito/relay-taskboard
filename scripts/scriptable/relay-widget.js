@@ -18,6 +18,8 @@
 // - ヘッダーの「All / Today」をタップ → 表示モード切替（Today = 期日が今日以前のみ）
 //   ※ ウィジェット設定の Parameter に today / all を書くと固定できる（タップ切替より優先）
 // - ヘッダーの ↻ をタップ → 再読み込み
+// - フッターの「ほか N 件」をタップ → Scriptable 内でスクロール可能な全件リストを表示
+//   （ウィジェット自体は iOS の仕様でスクロール不可のため）
 // - blocked / in_review（人の対応待ち）は ⚠ 付きで上部に表示
 // - 期限切れ・当日は赤、3日以内はオレンジで期日を表示
 // - タイトル部分のタップでデプロイ済みの Web UI を開く
@@ -93,8 +95,38 @@ async function notify(title, body) {
   await n.schedule()
 }
 
-// ウィジェット上のタップ操作（○ / モード切替 / ↻）はこの分岐で処理される
+// スクロール可能な全件リスト（Scriptable アプリ内で表示。ウィジェットは仕様上スクロール不可）
+async function presentTaskList(mode) {
+  const tasks = sortForDisplay(await fetchTasks(mode))
+  const table = new UITable()
+  table.showSeparators = true
+
+  const header = new UITableRow()
+  header.isHeader = true
+  header.height = 44
+  header.addText(`Relay — ${mode === "today" ? "今日のタスク" : "オープンタスク"} ${tasks.length}件`)
+  table.addRow(header)
+
+  for (const t of tasks) {
+    const row = new UITableRow()
+    row.height = 52
+    const d = daysUntil(t.due_date)
+    const dueLabel = d === null ? "" : d < 0 ? `${-d}日超過` : d === 0 ? "今日" : d === 1 ? "明日" : `${d}日後`
+    const icon = statusIcon(t) ?? "○"
+    row.addText(`${icon} ${t.title}`, dueLabel)
+    row.onSelect = () => Safari.open(BASE_URL)
+    table.addRow(row)
+  }
+
+  await table.present(false)
+}
+
+// ウィジェット上のタップ操作（○ / モード切替 / ↻ / 全件リスト）はこの分岐で処理される
 async function handleAction(params) {
+  if (params.action === "list") {
+    await presentTaskList(getMode())
+    return
+  }
   if (params.action === "done" && params.task) {
     try {
       await markDone(params.task)
@@ -156,18 +188,18 @@ function addTaskRow(widget, t) {
   const checkbox = row.addStack()
   checkbox.url = runUrl(`action=done&task=${encodeURIComponent(t.id)}&title=${encodeURIComponent(t.title)}`)
   const circle = checkbox.addText("○")
-  circle.font = Font.systemFont(13)
+  circle.font = Font.systemFont(12)
   circle.textColor = COLORS.sub
 
   const needsHuman = t.status === "blocked" || t.status === "in_review"
   const icon = statusIcon(t)
   if (icon) {
     const iconText = row.addText(icon)
-    iconText.font = Font.systemFont(11)
+    iconText.font = Font.systemFont(10)
   }
 
   const title = row.addText(t.title)
-  title.font = needsHuman ? Font.semiboldSystemFont(12) : Font.systemFont(12)
+  title.font = needsHuman ? Font.semiboldSystemFont(11) : Font.systemFont(11)
   title.textColor = needsHuman ? COLORS.needsHuman : COLORS.text
   title.lineLimit = 1
   title.url = BASE_URL
@@ -178,7 +210,7 @@ function addTaskRow(widget, t) {
   if (d !== null) {
     const label = d < 0 ? `${-d}日超過` : d === 0 ? "今日" : d === 1 ? "明日" : `${d}日後`
     const due = row.addText(label)
-    due.font = Font.mediumSystemFont(10)
+    due.font = Font.mediumSystemFont(9)
     due.textColor = d <= 0 ? COLORS.overdue : d <= 3 ? COLORS.soon : COLORS.sub
   }
 }
@@ -187,7 +219,7 @@ function buildWidget(tasks, mode) {
   const widget = new ListWidget()
   widget.backgroundColor = COLORS.bg
   widget.url = BASE_URL
-  widget.setPadding(14, 14, 12, 14)
+  widget.setPadding(12, 12, 10, 12)
   widget.refreshAfterDate = new Date(Date.now() + 15 * 60_000)
 
   const needsHumanCount = tasks.filter((t) => t.status === "blocked" || t.status === "in_review").length
@@ -235,8 +267,8 @@ function buildWidget(tasks, mode) {
     return widget
   }
 
-  widget.addSpacer(8)
-  const maxRows = config.widgetFamily === "large" ? 9 : 4
+  widget.addSpacer(6)
+  const maxRows = config.widgetFamily === "large" ? 12 : 6
   const sorted = sortForDisplay(tasks)
   if (sorted.length === 0) {
     const empty = widget.addText(mode === "today" ? "今日のタスクはありません 🎉" : "オープンタスクはありません 🎉")
@@ -245,12 +277,15 @@ function buildWidget(tasks, mode) {
   }
   for (const t of sorted.slice(0, maxRows)) {
     addTaskRow(widget, t)
-    widget.addSpacer(4)
+    widget.addSpacer(3)
   }
   if (sorted.length > maxRows) {
-    const more = widget.addText(`ほか ${sorted.length - maxRows} 件`)
-    more.font = Font.systemFont(10)
-    more.textColor = COLORS.sub
+    // ウィジェットはスクロール不可のため、溢れた分はタップでアプリ内の全件リストへ
+    const moreStack = widget.addStack()
+    moreStack.url = runUrl("action=list")
+    const more = moreStack.addText(`ほか ${sorted.length - maxRows} 件 ▸ タップで全件表示`)
+    more.font = Font.mediumSystemFont(10)
+    more.textColor = COLORS.accent
   }
   widget.addSpacer()
   return widget
