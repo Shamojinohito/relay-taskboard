@@ -2,7 +2,7 @@
 #SingleInstance Force
 
 ; ===================== 設定 =====================
-HOTKEY_COMBO := "^!Space"  ; Ctrl+Alt+Space（変更はここ）
+HOTKEY_COMBO := "^Space"  ; Ctrl+Space（変更はここ）
 BASE_URL := "https://relay-taskboard.vercel.app"
 CONFIG_PATH := A_ScriptDir "\config.ini"
 ; ================================================

@@ -1,6 +1,6 @@
 # Relay Quick Add — Windows (AutoHotkey v2)
 
-ホットキー（既定 `Ctrl+Alt+Space`）で入力ボックスを開き、1行でタスクを relay に登録する。
+ホットキー（既定 `Ctrl+Space`）で入力ボックスを開き、1行でタスクを relay に登録する。
 
 ## セットアップ
 
