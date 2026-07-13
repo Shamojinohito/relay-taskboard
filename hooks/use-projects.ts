@@ -13,7 +13,10 @@ export function useProjects() {
         .is('archived_at', null)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return data
+      // Inbox（クイックキャプチャの受け皿）は常に先頭に表示する（名前ベースのピン留め）
+      return (data ?? []).sort(
+        (a: any, b: any) => (a.name === 'Inbox' ? 0 : 1) - (b.name === 'Inbox' ? 0 : 1)
+      )
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
