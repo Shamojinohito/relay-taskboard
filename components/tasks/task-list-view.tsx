@@ -2,7 +2,8 @@
 
 // 全リスト系ビュー（プロジェクトList / My Tasks / Today / Inbox）共通のタスク一覧。
 // ソート可能列・完了チェックボックス・Active/Done/Allフィルタを一箇所に集約する。
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useDndMonitor, useDraggable, useDroppable } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import {
   AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, Bot, CalendarDays, GitBranch, ListChecks, UserRound,
@@ -85,7 +86,60 @@ interface TaskListViewProps {
   showStatusFilter?: boolean
   /** タイトル先頭に差し込む要素（Inbox の Reason チップ等） */
   renderLeading?: (task: any) => ReactNode
+  /** 手動順のとき、ドラッグ&ドロップ並び替えで確定したトップレベルタスクの
+      新しい順序を受け取って永続化する（プロジェクトList用） */
+  onReorder?: (orderedTopLevelIds: string[]) => void
   emptyMessage?: string
+}
+
+// デスクトップの1行。共通DndContext配下でドラッグ可能（サイドバーへのドロップ・並び替え）
+function DesktopRow({
+  task,
+  listId,
+  reorderEnabled,
+  className,
+  onTaskClick,
+  children,
+}: {
+  task: any
+  listId: string
+  reorderEnabled: boolean
+  className: string
+  onTaskClick: (taskId: string) => void
+  children: ReactNode
+}) {
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: `list-drag:${listId}:${task.id}`,
+    data: { type: 'task', source: 'list', listId, task },
+  })
+  const { isOver, setNodeRef: setDropRef } = useDroppable({
+    id: `list-row:${listId}:${task.id}`,
+    data: { type: 'list-row', listId, taskId: task.id },
+    disabled: !reorderEnabled || Boolean(task.parent_task_id),
+  })
+
+  return (
+    <div
+      ref={node => {
+        setDragRef(node)
+        setDropRef(node)
+      }}
+      {...attributes}
+      {...listeners}
+      role="button"
+      tabIndex={0}
+      className={cn(className, isDragging && 'opacity-40', isOver && 'border-t-2 border-t-primary')}
+      onClick={() => onTaskClick(task.id)}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onTaskClick(task.id)
+        }
+      }}
+    >
+      {children}
+    </div>
+  )
 }
 
 export default function TaskListView({
@@ -100,8 +154,10 @@ export default function TaskListView({
   enablePositionSort = false,
   showStatusFilter = true,
   renderLeading,
+  onReorder,
   emptyMessage = 'No tasks yet.',
 }: TaskListViewProps) {
+  const listId = useId()
   const [sortKey, setSortKey] = useState<TaskSortKey>(defaultSortKey)
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     defaultSortKey === 'priority' ? 'desc' : 'asc'
@@ -175,6 +231,31 @@ export default function TaskListView({
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const isOverdue = (task: any) =>
     Boolean(task.due_date) && task.due_date < todayStr && task.status !== 'done'
+
+  const reorderEnabled = Boolean(onReorder) && enablePositionSort && sortKey === 'position'
+
+  // このリスト内の行ドロップによる並び替え（サイドバー等へのドロップは共通プロバイダが処理）
+  useDndMonitor({
+    onDragEnd(event) {
+      if (!reorderEnabled || !onReorder) return
+      const data = event.active.data.current as any
+      const overData = event.over?.data.current as any
+      if (data?.type !== 'task' || data.source !== 'list' || data.listId !== listId) return
+      if (overData?.type !== 'list-row' || overData.listId !== listId) return
+      const activeTask = data.task
+      if (activeTask.parent_task_id) return // サブタスクの並び替えは非対応
+      const overId = overData.taskId as string
+      if (overId === activeTask.id) return
+
+      const topLevelIds = displayTasks.filter((t: any) => !t.parent_task_id).map((t: any) => t.id)
+      const from = topLevelIds.indexOf(activeTask.id)
+      const to = topLevelIds.indexOf(overId)
+      if (from === -1 || to === -1) return
+      topLevelIds.splice(from, 1)
+      topLevelIds.splice(to, 0, activeTask.id)
+      onReorder(topLevelIds)
+    },
+  })
 
   const toggleSort = (key: TaskSortKey) => {
     if (sortKey === key) {
@@ -351,22 +432,17 @@ export default function TaskListView({
           </div>
           <div className="hidden md:block">
             {displayTasks.map((task: any) => (
-              <div
+              <DesktopRow
                 key={task.id}
-                role="button"
-                tabIndex={0}
+                task={task}
+                listId={listId}
+                reorderEnabled={reorderEnabled}
+                onTaskClick={onTaskClick}
                 className={cn(
                   'grid w-full cursor-pointer grid-cols-1 gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors hover:bg-secondary/30 sm:px-6 md:items-center',
                   gridCols,
                   task.parent_task_id && 'bg-secondary/10'
                 )}
-                onClick={() => onTaskClick(task.id)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    onTaskClick(task.id)
-                  }
-                }}
               >
                 <div className={cn('flex min-w-0 items-center gap-2.5', task.parent_task_id && 'pl-5')}>
                   <TaskCompleteToggle
@@ -419,7 +495,7 @@ export default function TaskListView({
                 </div>
                 <div>{renderAssignee(task)}</div>
                 <div>{renderDue(task)}</div>
-              </div>
+              </DesktopRow>
             ))}
           </div>
         </>

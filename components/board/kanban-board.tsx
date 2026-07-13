@@ -1,15 +1,13 @@
 // components/board/kanban-board.tsx
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import {
-  closestCorners, CollisionDetection, DndContext, DragEndEvent, DragOverlay, DragOverEvent,
-  pointerWithin, PointerSensor, useSensor, useSensors
-} from '@dnd-kit/core'
+import { useEffect, useState } from 'react'
+import { DragEndEvent, DragOverEvent, DragStartEvent, useDndMonitor } from '@dnd-kit/core'
+import { useQueryClient } from '@tanstack/react-query'
 import { KanbanColumn } from './kanban-column'
-import { TaskCard } from './task-card'
 import { useTasks, type TaskStatus } from '@/hooks/use-tasks'
 import { useTasksRealtime } from '@/hooks/use-realtime'
+import { createClient } from '@/lib/supabase/client'
 import { TASK_STATUSES } from '@/lib/task-status'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,9 +52,10 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardProps) {
   useTasksRealtime(projectId)
-  const { tasks, isLoading, error, updateStatus, refetch } = useTasks(projectId)
-  const [activeTask, setActiveTask] = useState<(typeof tasks)[0] | null>(null)
+  const { tasks, isLoading, error, refetch } = useTasks(projectId)
   const [projectedTasks, setProjectedTasks] = useState<typeof tasks | null>(null)
+  const queryClient = useQueryClient()
+  const supabase = createClient()
   // SSRとの不一致を避けるため初期値は固定し、localStorage はマウント後に読む
   const [sortKey, setSortKey] = useState<BoardSortKey>('position')
 
@@ -78,28 +77,6 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     }
   }
 
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: { distance: 5 }
-  }))
-
-  const collisionDetection = useCallback<CollisionDetection>((args) => {
-    const pointerCollisions = pointerWithin(args)
-    const fallbackCollisions = pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args)
-    const collisions = fallbackCollisions.filter(collision => collision.id !== args.active.id)
-
-    const taskCollision = collisions.find(collision =>
-      collision.data?.droppableContainer.data.current?.type === 'task'
-    )
-    if (taskCollision) return [taskCollision]
-
-    const columnCollision = collisions.find(collision =>
-      collision.data?.droppableContainer.data.current?.type === 'column'
-    )
-    if (columnCollision) return [columnCollision]
-
-    return collisions
-  }, [])
-
   const getOverStatus = (overId: string, taskList: typeof tasks) => {
     const columnStatus = STATUSES.find(status => status === overId)
     if (columnStatus) return columnStatus
@@ -111,6 +88,13 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     return left.every((task, index) =>
       task.id === right[index]?.id && task.status === right[index]?.status
     )
+  }
+
+  // このボードのカードのドラッグかどうか（共通DndContext配下で他ビューのイベントも流れてくる）
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isBoardDrag = (active: { data: { current?: any } }) => {
+    const data = active.data.current
+    return data?.type === 'task' && data.source === 'board' && data.task?.project_id === projectId
   }
 
   const projectTaskMove = (event: DragOverEvent) => {
@@ -155,21 +139,79 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
     })
   }
 
+  // ドロップ結果の永続化: ステータス変更 + （手動順のとき）対象列の position 振り直し
+  const persistDrop = async (finalTasks: typeof tasks, movedTaskId: string, nextStatus: TaskStatus | undefined, currentStatus: TaskStatus | undefined) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updates: { id: string; fields: Record<string, any> }[] = []
+
+    if (nextStatus && nextStatus !== currentStatus) {
+      updates.push({ id: movedTaskId, fields: { status: nextStatus } })
+    }
+
+    if (sortKey === 'position') {
+      const targetStatus = nextStatus ?? currentStatus
+      const columnTasks = finalTasks.filter(task => task.status === targetStatus)
+      columnTasks.forEach((task, index) => {
+        const original = tasks.find(t => t.id === task.id)
+        if (original?.position === index) return
+        const existing = updates.find(u => u.id === task.id)
+        if (existing) existing.fields.position = index
+        else updates.push({ id: task.id, fields: { position: index } })
+      })
+    }
+
+    if (updates.length === 0) return
+
+    // 楽観的更新: 投影済みの並びとステータスをそのままクエリキャッシュへ
+    const fieldsById = new Map(updates.map(u => [u.id, u.fields]))
+    queryClient.setQueryData(['tasks', projectId], finalTasks.map(task => {
+      const fields = fieldsById.get(task.id)
+      return fields ? { ...task, ...fields } : task
+    }))
+
+    await Promise.all(updates.map(({ id, fields }) =>
+      (supabase.from('tasks') as any).update(fields).eq('id', id)
+    ))
+    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['my-tasks'] })
+    queryClient.invalidateQueries({ queryKey: ['today-tasks'] })
+    queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    setActiveTask(null)
+    const finalTasks = projectedTasks ?? tasks
     setProjectedTasks(null)
     if (!over) return
 
-    const newStatus = getOverStatus(String(over.id), projectedTasks ?? tasks)
-    const currentStatus = tasks.find(task => task.id === active.id)?.status
-    const projectedStatus = (projectedTasks ?? tasks).find(task => task.id === active.id)?.status
+    // サイドバーへのドロップは共通プロバイダが処理する
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const overType = (over.data.current as any)?.type
+    if (overType === 'sidebar-project' || overType === 'sidebar-my-tasks') return
+
+    const newStatus = getOverStatus(String(over.id), finalTasks)
+    const currentStatus = tasks.find(task => task.id === active.id)?.status as TaskStatus | undefined
+    const projectedStatus = finalTasks.find(task => task.id === active.id)?.status as TaskStatus | undefined
     const nextStatus = newStatus ?? projectedStatus
 
-    if (nextStatus && nextStatus !== currentStatus) {
-      updateStatus.mutate({ taskId: active.id as string, status: nextStatus })
-    }
+    void persistDrop(finalTasks, String(active.id), nextStatus, currentStatus)
   }
+
+  useDndMonitor({
+    onDragStart(event: DragStartEvent) {
+      if (isBoardDrag(event.active)) setProjectedTasks(tasks)
+    },
+    onDragOver(event: DragOverEvent) {
+      if (isBoardDrag(event.active)) projectTaskMove(event)
+    },
+    onDragCancel() {
+      setProjectedTasks(null)
+    },
+    onDragEnd(event: DragEndEvent) {
+      if (isBoardDrag(event.active)) handleDragEnd(event)
+      else setProjectedTasks(null)
+    },
+  })
 
   const visibleTasks = projectedTasks ?? tasks
   const tasksByStatus = STATUSES.reduce((acc, status) => {
@@ -182,61 +224,48 @@ export function KanbanBoard({ projectId, onTaskClick, onAddTask }: KanbanBoardPr
   }, {} as Record<TaskStatus, typeof visibleTasks>)
 
   return (
-    <DndContext collisionDetection={collisionDetection} sensors={sensors} onDragStart={e => {
-      setActiveTask(tasks.find(t => t.id === e.active.id) ?? null)
-      setProjectedTasks(tasks)
-    }} onDragOver={projectTaskMove} onDragCancel={() => {
-      setActiveTask(null)
-      setProjectedTasks(null)
-    }} onDragEnd={handleDragEnd}>
-      <div className="flex h-full flex-col bg-background">
-        <div className="flex items-center justify-end gap-2 border-b border-border/60 px-6 py-2">
-          <span className="text-xs text-muted-foreground">Sort by</span>
-          <Select value={sortKey} onValueChange={value => changeSortKey(value as BoardSortKey)}>
-            <SelectTrigger size="sm" className="w-28">
-              <SelectValue>{(v: string) => BOARD_SORT_LABELS[v as BoardSortKey] ?? v}</SelectValue>
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="position">Manual</SelectItem>
-              <SelectItem value="due_date">Due date</SelectItem>
-              <SelectItem value="priority">Priority</SelectItem>
-              <SelectItem value="created_at">Created</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-1 gap-5 overflow-x-auto px-6 py-5">
-        {error ? (
-          <div className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-8 text-sm text-destructive">
-            <p>Failed to load tasks: {(error as Error).message}</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
-          </div>
-        ) : isLoading ? (
-          STATUSES.map(status => (
-            <KanbanColumn key={status} status={status} tasks={[]} isLoading onTaskClick={onTaskClick} onAddTask={onAddTask} />
-          ))
-        ) : tasks.length === 0 ? (
-          <div className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
-            <p className="text-sm">No tasks yet.</p>
-            <Button size="sm" onClick={() => onAddTask('backlog')}>Create your first task</Button>
-          </div>
-        ) : (
-          STATUSES.map(status => (
-            <KanbanColumn
-              key={status}
-              status={status}
-              tasks={tasksByStatus[status]}
-              onTaskClick={onTaskClick}
-              onAddTask={onAddTask}
-            />
-          ))
-        )}
-        </div>
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex items-center justify-end gap-2 border-b border-border/60 px-6 py-2">
+        <span className="text-xs text-muted-foreground">Sort by</span>
+        <Select value={sortKey} onValueChange={value => changeSortKey(value as BoardSortKey)}>
+          <SelectTrigger size="sm" className="w-28">
+            <SelectValue>{(v: string) => BOARD_SORT_LABELS[v as BoardSortKey] ?? v}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="position">Manual</SelectItem>
+            <SelectItem value="due_date">Due date</SelectItem>
+            <SelectItem value="priority">Priority</SelectItem>
+            <SelectItem value="created_at">Created</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <DragOverlay>
-        {activeTask && (
-          <TaskCard task={activeTask} onClick={() => {}} />
-        )}
-      </DragOverlay>
-    </DndContext>
+      <div className="flex flex-1 gap-5 overflow-x-auto px-6 py-5">
+      {error ? (
+        <div className="flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-8 text-sm text-destructive">
+          <p>Failed to load tasks: {(error as Error).message}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+        </div>
+      ) : isLoading ? (
+        STATUSES.map(status => (
+          <KanbanColumn key={status} status={status} tasks={[]} isLoading onTaskClick={onTaskClick} onAddTask={onAddTask} />
+        ))
+      ) : tasks.length === 0 ? (
+        <div className="flex w-full flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
+          <p className="text-sm">No tasks yet.</p>
+          <Button size="sm" onClick={() => onAddTask('backlog')}>Create your first task</Button>
+        </div>
+      ) : (
+        STATUSES.map(status => (
+          <KanbanColumn
+            key={status}
+            status={status}
+            tasks={tasksByStatus[status]}
+            onTaskClick={onTaskClick}
+            onAddTask={onAddTask}
+          />
+        ))
+      )}
+      </div>
+    </div>
   )
 }

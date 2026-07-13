@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useDroppable } from '@dnd-kit/core'
 import { Bot, CalendarCheck, CheckSquare, FolderKanban, Inbox, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -15,9 +16,30 @@ import RelayLogo from '@/components/brand/relay-logo'
 interface SidebarProps {
   className?: string
   onNavigate?: () => void
+  /** タスクのドロップ受け入れを有効化する（レイアウト直下のインスタンスのみ。
+      モバイルSheet側と droppable id が重複しないよう既定は無効） */
+  dndEnabled?: boolean
 }
 
-export default function Sidebar({ className, onNavigate }: SidebarProps) {
+// タスクをドロップできるナビ項目のラッパー。isOver でハイライトする
+function DroppableNavItem({
+  id,
+  data,
+  children,
+}: {
+  id: string
+  data: Record<string, unknown>
+  children: React.ReactNode
+}) {
+  const { isOver, setNodeRef } = useDroppable({ id, data })
+  return (
+    <div ref={setNodeRef} className={cn('rounded-lg transition-shadow', isOver && 'bg-primary/10 ring-2 ring-primary/60')}>
+      {children}
+    </div>
+  )
+}
+
+export default function Sidebar({ className, onNavigate, dndEnabled = false }: SidebarProps) {
   const pathname = usePathname()
   const { projects, isLoading, error } = useProjects()
   const [createOpen, setCreateOpen] = useState(false)
@@ -52,10 +74,19 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
             <span>Today</span>
           </Link>
 
-          <Link href="/my-tasks" className={navItemClassName(pathname === '/my-tasks')} onClick={onNavigate}>
-            <CheckSquare size={16} />
-            <span>My Tasks</span>
-          </Link>
+          {dndEnabled ? (
+            <DroppableNavItem id="sidebar-my-tasks" data={{ type: 'sidebar-my-tasks' }}>
+              <Link href="/my-tasks" className={navItemClassName(pathname === '/my-tasks')} onClick={onNavigate}>
+                <CheckSquare size={16} />
+                <span>My Tasks</span>
+              </Link>
+            </DroppableNavItem>
+          ) : (
+            <Link href="/my-tasks" className={navItemClassName(pathname === '/my-tasks')} onClick={onNavigate}>
+              <CheckSquare size={16} />
+              <span>My Tasks</span>
+            </Link>
+          )}
 
           <div className="px-3 pb-1 pt-5">
             <div className="flex items-center justify-between">
@@ -84,17 +115,28 @@ export default function Sidebar({ className, onNavigate }: SidebarProps) {
               No projects yet. Use the + above to create one.
             </p>
           ) : (
-            (projects as any[]).map(project => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className={cn(navItemClassName(pathname.startsWith(`/projects/${project.id}`)), "truncate")}
-                onClick={onNavigate}
-              >
-                <FolderKanban size={15} className="flex-shrink-0" />
-                <span className="truncate">{project.name}</span>
-              </Link>
-            ))
+            (projects as any[]).map(project => {
+              const link = (
+                <Link
+                  key={dndEnabled ? undefined : project.id}
+                  href={`/projects/${project.id}`}
+                  className={cn(navItemClassName(pathname.startsWith(`/projects/${project.id}`)), "truncate")}
+                  onClick={onNavigate}
+                >
+                  <FolderKanban size={15} className="flex-shrink-0" />
+                  <span className="truncate">{project.name}</span>
+                </Link>
+              )
+              return dndEnabled ? (
+                <DroppableNavItem
+                  key={project.id}
+                  id={`sidebar-project:${project.id}`}
+                  data={{ type: 'sidebar-project', projectId: project.id }}
+                >
+                  {link}
+                </DroppableNavItem>
+              ) : link
+            })
           )}
 
           <div className="px-3 pb-1 pt-5">

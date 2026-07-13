@@ -61,7 +61,7 @@ function getStableColor(seed?: string | null) {
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id, data: { type: 'task', status: task.status } })
+    useSortable({ id: task.id, data: { type: 'task', status: task.status, source: 'board', task } })
 
   const style = {
     transform: CSS.Transform.toString(transform),

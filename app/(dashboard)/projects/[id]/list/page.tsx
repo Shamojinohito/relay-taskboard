@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 import { useTasks } from '@/hooks/use-tasks'
 import { useTasksRealtime } from '@/hooks/use-realtime'
 import { useProjects } from '@/hooks/use-projects'
@@ -24,6 +26,33 @@ export default function ProjectListPage() {
     updateStatus.mutate({ taskId, status })
   }
 
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  // ドラッグ&ドロップ並び替えの永続化（トップレベルタスクの position を表示順で振り直す）
+  const handleReorder = (orderedTopLevelIds: string[]) => {
+    const positionById = new Map(orderedTopLevelIds.map((taskId, index) => [taskId, index]))
+    const changed = (tasks as any[]).filter(
+      task => positionById.has(task.id) && task.position !== positionById.get(task.id)
+    )
+    if (changed.length === 0) return
+
+    queryClient.setQueryData(['tasks', id, 'with-subtasks'], (current: unknown) => {
+      if (!Array.isArray(current)) return current
+      return current.map((task: any) =>
+        positionById.has(task.id) ? { ...task, position: positionById.get(task.id) } : task
+      )
+    })
+
+    void Promise.all(
+      changed.map(task =>
+        (supabase.from('tasks') as any)
+          .update({ position: positionById.get(task.id) })
+          .eq('id', task.id)
+      )
+    ).then(() => queryClient.invalidateQueries({ queryKey: ['tasks', id] }))
+  }
+
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -44,6 +73,7 @@ export default function ProjectListPage() {
             onStatusChange={changeStatus}
             defaultSortKey="position"
             enablePositionSort
+            onReorder={handleReorder}
           />
         </div>
       </div>
