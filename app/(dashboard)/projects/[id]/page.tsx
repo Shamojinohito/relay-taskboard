@@ -13,8 +13,8 @@ export default function ProjectBoardPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
-  // On small screens the list view is far more scannable than the board,
-  // so default to it unless the user has explicitly chosen the board view.
+  // リスト表示がデフォルト。ボードはユーザーが明示的に選んだとき（前回選択の
+  // localStorage が 'board' のとき）のみ表示する。
   useEffect(() => {
     let preferred: string | null = null
     try {
@@ -22,7 +22,7 @@ export default function ProjectBoardPage() {
     } catch {
       // storage unavailable — fall through to the default
     }
-    if (preferred !== 'board' && window.matchMedia('(max-width: 767px)').matches) {
+    if (preferred !== 'board') {
       router.replace(`/projects/${id}/list`)
     }
   }, [id, router])

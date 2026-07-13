@@ -1,16 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { format, isBefore, addDays, parseISO } from 'date-fns'
-import { AlertTriangle, Bot, CalendarDays, Inbox, UserRound } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { isBefore, addDays, parseISO } from 'date-fns'
+import { AlertTriangle, Inbox } from 'lucide-react'
 import TaskDetailPanel from '@/components/tasks/task-detail-panel'
+import TaskListView from '@/components/tasks/task-list-view'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { getTaskStatusDotColor, getTaskStatusLabel } from '@/lib/task-status'
-import { getTaskReadiness, TASK_READINESS_STYLES } from '@/lib/task-readiness'
 import { useInboxRealtime } from '@/hooks/use-realtime'
+import type { TaskStatus } from '@/lib/task-status'
 
 interface InboxTask {
   id: string
@@ -26,13 +26,6 @@ interface InboxTask {
   project: { name: string } | null
   task_tags: { tags: { id: string; name: string; color: string } | null }[]
   assignee_agent: { name: string; type: string } | null
-}
-
-const PRIORITY_RANK: Record<string, number> = {
-  urgent: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
 }
 
 function isDueSoon(dueDate: string | null) {
@@ -56,9 +49,10 @@ function getTriageReason(task: InboxTask) {
 export default function InboxPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const supabase = createClient()
+  const queryClient = useQueryClient()
   useInboxRealtime()
 
-  const { data: tasks = [], isLoading, error } = useQuery({
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
     queryKey: ['triage-inbox'],
     queryFn: async () => {
       const { data, error } = await (supabase.from('tasks') as any)
@@ -88,20 +82,49 @@ export default function InboxPage() {
     refetchOnWindowFocus: false,
   })
 
-  const triageTasks = useMemo(() => {
-    return [...tasks]
-      .filter(task =>
-        task.status === 'blocked' ||
-        task.status === 'in_review' ||
-        !hasAssignee(task) ||
-        !task.handoff_note?.trim() ||
-        isDueSoon(task.due_date)
-      )
-      .sort((a, b) => {
-        const reasonRank = getTriageReason(a).localeCompare(getTriageReason(b))
-        if (reasonRank !== 0) return reasonRank
-        return (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9)
+  const updateStatus = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('tasks') as any)
+        .update({ status })
+        .eq('id', taskId)
+      if (error) throw error
+    },
+    onMutate: async ({ taskId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['triage-inbox'] })
+      const previousTasks = queryClient.getQueryData(['triage-inbox'])
+      queryClient.setQueryData(['triage-inbox'], (current: unknown) => {
+        if (!Array.isArray(current)) return current
+        return current.map((task: InboxTask) =>
+          task.id === taskId ? { ...task, status } : task
+        )
       })
+      return { previousTasks }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['triage-inbox'], context.previousTasks)
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['triage-inbox'] })
+      const task = (tasks as InboxTask[]).find(t => t.id === variables.taskId)
+      if (task) queryClient.invalidateQueries({ queryKey: ['tasks', task.project_id] })
+    },
+  })
+
+  const changeStatus = (taskId: string, status: TaskStatus) => {
+    updateStatus.mutate({ taskId, status })
+  }
+
+  const triageTasks = useMemo(() => {
+    return (tasks as InboxTask[]).filter(task =>
+      task.status === 'blocked' ||
+      task.status === 'in_review' ||
+      !hasAssignee(task) ||
+      !task.handoff_note?.trim() ||
+      isDueSoon(task.due_date)
+    )
   }, [tasks])
 
   const counts = {
@@ -116,22 +139,22 @@ export default function InboxPage() {
 
   return (
     <div className="flex h-full">
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-6xl px-6 py-5">
-          <div className="mb-5 flex items-center justify-between">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="border-b border-border bg-background/70 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                <Inbox size={20} className="text-primary" />
+              <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+                <Inbox size={19} className="text-primary" />
                 Inbox
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Triage tasks that need context, ownership, human review, or unblock decisions.
               </p>
             </div>
             <Badge variant="outline" className="px-2.5 py-1">{triageTasks.length} signals</Badge>
           </div>
 
-          <div className="mb-5 grid gap-3 md:grid-cols-5">
+          <div className="mt-4 grid gap-3 md:grid-cols-5">
             {[
               ['Blocked', counts.blocked, 'bg-rose-500'],
               ['Unassigned', counts.unassigned, 'bg-sky-400'],
@@ -148,77 +171,29 @@ export default function InboxPage() {
               </div>
             ))}
           </div>
-
-          {error ? (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-              Failed to load inbox: {(error as Error).message}
-            </div>
-          ) : isLoading ? (
-            <div className="rounded-lg border border-border bg-card/60 p-6 text-sm text-muted-foreground">
-              Loading inbox...
-            </div>
-          ) : triageTasks.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card/60 p-10 text-center text-sm text-muted-foreground">
-              No triage signals. The board is in a clean state.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-border bg-card/70">
-              <div className="hidden grid-cols-[112px_minmax(0,1fr)_144px_96px_124px_112px] border-b border-border bg-background/45 px-3 py-2 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground md:grid">
-                <span>Reason</span>
-                <span>Task</span>
-                <span>Project</span>
-                <span>Status</span>
-                <span>Assignee</span>
-                <span>Due</span>
-              </div>
-              {triageTasks.map(task => {
-                const readiness = getTaskReadiness(task)
-                return (
-                  <button
-                    key={task.id}
-                    type="button"
-                    className="grid w-full grid-cols-1 gap-1.5 border-b border-border/50 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-secondary/35 md:grid-cols-[112px_minmax(0,1fr)_144px_96px_124px_112px] md:items-center"
-                    onClick={() => setSelectedTaskId(task.id)}
-                  >
-                    <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-background/55 px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                      <AlertTriangle size={11} />
-                      {getTriageReason(task)}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-2">
-                        <span className={cn('size-2 rounded-full', TASK_READINESS_STYLES[readiness.level])} title={readiness.title} />
-                        <span className="truncate text-sm font-medium text-foreground">{task.title}</span>
-                      </span>
-                      {task.task_tags.length > 0 && (
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {task.task_tags.slice(0, 2).map(({ tags }) => tags && (
-                            <span key={tags.id} className="rounded border px-1 py-0.5 text-[9px]" style={{ borderColor: tags.color, color: tags.color }}>
-                              {tags.name}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">{task.project?.name ?? 'No project'}</span>
-                    <span className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className={cn('size-2 rounded-full', getTaskStatusDotColor(task.status))} />
-                      {getTaskStatusLabel(task.status)}
-                    </span>
-                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                      {task.assignee_agent_id ? <Bot size={12} /> : task.assignee_user_id ? <UserRound size={12} /> : null}
-                      <span className="truncate">{task.assignee_agent?.name ?? (task.assignee_user_id ? 'Human' : 'None')}</span>
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarDays size={12} />
-                      {task.due_date ? format(parseISO(task.due_date), 'yyyy.MM.dd') : 'No due'}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </div>
-      </main>
+
+        <div className="flex-1 overflow-auto">
+          <TaskListView
+            tasks={triageTasks as any[]}
+            isLoading={isLoading}
+            error={error as Error | null}
+            onRetry={() => refetch()}
+            onTaskClick={setSelectedTaskId}
+            onStatusChange={changeStatus}
+            showProject
+            showStatusFilter={false}
+            defaultSortKey="due_date"
+            emptyMessage="No triage signals. The board is in a clean state."
+            renderLeading={(task: any) => (
+              <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/55 px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                <AlertTriangle size={11} />
+                {getTriageReason(task)}
+              </span>
+            )}
+          />
+        </div>
+      </div>
 
       {selectedTaskId && selectedTask && (
         <TaskDetailPanel
