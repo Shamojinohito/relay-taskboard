@@ -1,6 +1,6 @@
 import { TASK_STATUSES } from '@/lib/task-status'
 
-export type TaskSortKey = 'title' | 'status' | 'priority' | 'assignee' | 'due_date' | 'project' | 'position'
+export type TaskSortKey = 'title' | 'status' | 'priority' | 'assignee' | 'due_date' | 'project' | 'position' | 'created_at'
 export type SortDirection = 'asc' | 'desc'
 
 const PRIORITY_RANK: Record<string, number> = {
@@ -20,6 +20,7 @@ interface SortableTask {
   priority?: string | null
   due_date?: string | null
   position?: number | null
+  created_at?: string | null
   project?: { name?: string | null } | null
   assignee_agent?: { name?: string | null } | null
   assignee_user?: { email?: string | null } | null
@@ -46,6 +47,8 @@ function getSortValue(task: SortableTask, key: TaskSortKey) {
       return task.project?.name ?? ''
     case 'position':
       return task.position ?? Number.POSITIVE_INFINITY
+    case 'created_at':
+      return task.created_at ? new Date(task.created_at).getTime() : Number.POSITIVE_INFINITY
   }
 }
 

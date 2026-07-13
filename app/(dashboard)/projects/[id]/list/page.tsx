@@ -25,6 +25,20 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'text-red-400',
 }
 
+type StatusFilter = 'active' | 'done' | 'all'
+
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  active: 'Active',
+  done: 'Done',
+  all: 'All',
+}
+
+function matchesStatusFilter(status: string, filter: StatusFilter) {
+  if (filter === 'all') return true
+  if (filter === 'done') return status === 'done'
+  return status !== 'done'
+}
+
 export default function ProjectListPage() {
   const { id } = useParams<{ id: string }>()
   const { projects } = useProjects()
@@ -35,10 +49,22 @@ export default function ProjectListPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [sortKey, setSortKey] = useState<TaskSortKey>('position')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
+
+  const filteredTasks = useMemo(
+    () => (tasks as any[]).filter(task => matchesStatusFilter(task.status, statusFilter)),
+    [tasks, statusFilter]
+  )
+
+  const filterCounts = useMemo(() => ({
+    active: (tasks as any[]).filter(task => task.status !== 'done').length,
+    done: (tasks as any[]).filter(task => task.status === 'done').length,
+    all: (tasks as any[]).length,
+  }), [tasks])
 
   const sortedTasks = useMemo(
-    () => sortTasks(tasks as any[], sortKey, sortDirection),
-    [tasks, sortKey, sortDirection]
+    () => sortTasks(filteredTasks, sortKey, sortDirection),
+    [filteredTasks, sortKey, sortDirection]
   )
 
   const displayTasks = useMemo(() => {
@@ -121,6 +147,27 @@ export default function ProjectListPage() {
           onAddTask={() => setCreateOpen(true)}
         />
 
+        <div className="flex items-center border-b border-border/60 px-4 py-2 sm:px-6">
+          <div className="flex w-fit gap-1 rounded-lg border border-border bg-card p-1">
+            {(['active', 'done', 'all'] as const).map(filter => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setStatusFilter(filter)}
+                className={cn(
+                  'inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors',
+                  statusFilter === filter
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {STATUS_FILTER_LABELS[filter]}
+                <span className="text-[10px] tabular-nums opacity-70">{filterCounts[filter]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-auto">
           {error ? (
             <div className="px-6 py-10 text-center text-sm text-destructive">
@@ -137,7 +184,11 @@ export default function ProjectListPage() {
             </div>
           ) : displayTasks.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-muted-foreground">
-              No tasks yet.
+              {(tasks as any[]).length === 0
+                ? 'No tasks yet.'
+                : statusFilter === 'done'
+                  ? 'No completed tasks.'
+                  : 'No active tasks.'}
             </div>
           ) : (
             <>
